@@ -49,6 +49,18 @@ class VimEngine: KeyboardHookDelegate {
                 accessibilityManager.moveCursor(.right)
                 return true
             
+            case 37: // l
+                accessibilityManager.moveCursor(.right)
+                return true
+            
+            // Word Motions
+            case 13: // w
+                accessibilityManager.moveWordForward()
+                return true
+            case 11: // b
+                 accessibilityManager.moveWordBackward()
+                 return true
+            
             // Advanced Motions
             case 29: // 0 (Zero) - Go to start of line (approximated as start of text for now or simulated Cmd+Left)
                  // Or better: use AX to set range to 0?

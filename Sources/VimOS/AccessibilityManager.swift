@@ -39,6 +39,38 @@ class AccessibilityManager {
         return nil
     }
     
+    // MARK: - Word Operations
+    
+    // MARK: - Word Operations
+    
+    func moveWordForward() {
+        if let text = getText(), let currentRange = getSelectedRange() {
+            let currentIndex = currentRange.location
+            let newIndex = WordMotionLogic.getNextWordIndex(text: text, currentIndex: currentIndex)
+            if newIndex != currentIndex {
+                setSelectedRange(CFRange(location: newIndex, length: 0))
+                return
+            }
+        }
+        
+        // Fallback: Simulate Option+Right Arrow
+        simulateKeyPress(keyCode: 124, flags: .maskAlternate)
+    }
+    
+    func moveWordBackward() {
+        if let text = getText(), let currentRange = getSelectedRange() {
+             let currentIndex = currentRange.location
+             let newIndex = WordMotionLogic.getPrevWordIndex(text: text, currentIndex: currentIndex)
+             if newIndex != currentIndex {
+                 setSelectedRange(CFRange(location: newIndex, length: 0))
+                 return
+             }
+        }
+        
+        // Fallback: Simulate Option+Left Arrow
+        simulateKeyPress(keyCode: 123, flags: .maskAlternate)
+    }
+    
     func getText() -> String? {
         guard let element = getFocusedElement() else { return nil }
         
@@ -48,6 +80,11 @@ class AccessibilityManager {
         if result == .success, let stringValue = value as? String {
             return stringValue
         }
+        // Debug
+        var role: AnyObject?
+        AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &role)
+        print("getText failed. Role: \(String(describing: role)). Error: \(result.rawValue)")
+        
         return nil
     }
     
@@ -83,18 +120,18 @@ class AccessibilityManager {
         simulateKeyPress(keyCode: keyCode)
     }
     
-    private func simulateKeyPress(keyCode: CGKeyCode) {
+    private func simulateKeyPress(keyCode: CGKeyCode, flags: CGEventFlags = []) {
         // combinedSessionState is often required for events to be seen by other apps
         guard let source = CGEventSource(stateID: .combinedSessionState) else {
             print("Failed to create event source")
             return
         }
         
-        // Disable local keyboard events to prevent our own hook from seeing this if possible,
-        // though usually keycodes differ so it's fine.
-        
         let keyDown = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: true)
+        keyDown?.flags = flags
+        
         let keyUp = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: false)
+        keyUp?.flags = flags
         
         keyDown?.post(tap: .cghidEventTap)
         keyUp?.post(tap: .cghidEventTap)
