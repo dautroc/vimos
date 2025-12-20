@@ -41,8 +41,6 @@ class AccessibilityManager {
     
     // MARK: - Word Operations
     
-    // MARK: - Word Operations
-    
     func moveWordForward() {
         if let text = getText(), let currentRange = getSelectedRange() {
             let currentIndex = currentRange.location
@@ -68,7 +66,6 @@ class AccessibilityManager {
         }
         
         // Fallback: Simulate Option+Left Arrow
-        print("AX Failed or Partial: Falling back to Option+Left")
         simulateKeyPress(keyCode: 123, flags: .maskAlternate)
     }
     
@@ -83,6 +80,8 @@ class AccessibilityManager {
         }
         // No good fallback system key for 'e' unfortunately.
     }
+    
+    // MARK: - Line Operations
     
     func moveToLineStart() { // 0
         if let text = getText(), let currentRange = getSelectedRange() {
@@ -119,9 +118,24 @@ class AccessibilityManager {
                  return
              }
         }
-        // Fallback approximation: Cmd+Left, then Option+Right? Too complex. Just Cmd+Left.
+        // Fallback approximation: Cmd+Left
         simulateKeyPress(keyCode: 123, flags: .maskCommand)
     }
+    
+    // MARK: - Document Motions
+    
+    func moveToStartOfDocument() { // gg
+        // Using AX for whole document is excessive/hard (getting full text range).
+        // Standard macOS is Cmd+Up Arrow.
+        simulateKeyPress(keyCode: 126, flags: .maskCommand)
+    }
+    
+    func moveToEndOfDocument() { // G
+        // Standard macOS is Cmd+Down Arrow.
+        simulateKeyPress(keyCode: 125, flags: .maskCommand)
+    }
+    
+    // MARK: - Text Access
     
     func getText() -> String? {
         guard let element = getFocusedElement() else { return nil }
@@ -132,19 +146,11 @@ class AccessibilityManager {
         if result == .success, let stringValue = value as? String {
             return stringValue
         }
-        // Debug
-        var role: AnyObject?
-        AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &role)
-        print("getText failed. Role: \(String(describing: role)). Error: \(result.rawValue)")
-        
         return nil
     }
     
     func setText(_ text: String) {
          guard let element = getFocusedElement() else { return }
-         
-         // Note: AXValue can be read-only.
-         // A safer way often is to paste, but let's try AX API first for "Replace"
          AXUIElementSetAttributeValue(element, kAXValueAttribute as CFString, text as AnyObject)
     }
 
@@ -160,7 +166,6 @@ class AccessibilityManager {
     // MARK: - Movement simulation (Fallback)
     
     func moveCursor(_ direction: Direction) {
-        // Fallback: Simulate Arrow Keys for movement if AX fails or is too complex for simple moves
         let keyCode: CGKeyCode
         switch direction {
         case .left: keyCode = 123
@@ -173,7 +178,6 @@ class AccessibilityManager {
     }
     
     private func simulateKeyPress(keyCode: CGKeyCode, flags: CGEventFlags = []) {
-        // combinedSessionState is often required for events to be seen by other apps
         guard let source = CGEventSource(stateID: .combinedSessionState) else {
             print("Failed to create event source")
             return
@@ -189,4 +193,3 @@ class AccessibilityManager {
         keyUp?.post(tap: .cghidEventTap)
     }
 }
-

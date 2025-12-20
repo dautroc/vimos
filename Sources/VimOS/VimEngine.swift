@@ -8,6 +8,7 @@ enum VimMode {
 class VimEngine: KeyboardHookDelegate {
     private var mode: VimMode = .insert
     private let accessibilityManager = AccessibilityManager()
+    private var lastKeyCode: Int? // Simple buffer for 'gg'
 
     func handle(keyEvent: CGEvent) -> Bool {
         let flags = keyEvent.flags
@@ -33,9 +34,34 @@ class VimEngine: KeyboardHookDelegate {
                 return true
             }
             
+            // Special handling for 'g' (5)
+            if keyCode == 5 {
+                if flags.contains(.maskShift) { // 'G'
+                     accessibilityManager.moveToEndOfDocument()
+                     lastKeyCode = nil
+                     return true
+                } else { // 'g'
+                    if lastKeyCode == 5 { // 'gg'
+                        accessibilityManager.moveToStartOfDocument()
+                        lastKeyCode = nil
+                        return true
+                    } else {
+                        lastKeyCode = 5 // Buffer it
+                        return true // Swallow first 'g'
+                    }
+                }
+            } else {
+                // If we had a buffered 'g' and pressed something else,
+                // technically we should execute the partial command or ignore.
+                // Vim behaviors vary (e.g. 'gh' might mean something).
+                // For now, clear buffer.
+                lastKeyCode = nil
+            }
+
             // Movements
-            // h: 4, j: 38, k: 40, l: 37
             switch keyCode {
+            // ... (h, j, k, l, w, b, etc remain)
+
             case 4: // h
                 accessibilityManager.moveCursor(.left)
                 return true
@@ -45,10 +71,6 @@ class VimEngine: KeyboardHookDelegate {
             case 40: // k
                 accessibilityManager.moveCursor(.up)
                 return true
-            case 37: // l
-                accessibilityManager.moveCursor(.right)
-                return true
-            
             case 37: // l
                 accessibilityManager.moveCursor(.right)
                 return true
