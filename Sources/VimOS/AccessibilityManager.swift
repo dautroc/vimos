@@ -68,7 +68,59 @@ class AccessibilityManager {
         }
         
         // Fallback: Simulate Option+Left Arrow
+        print("AX Failed or Partial: Falling back to Option+Left")
         simulateKeyPress(keyCode: 123, flags: .maskAlternate)
+    }
+    
+    func moveToEndOfWord() {
+        if let text = getText(), let currentRange = getSelectedRange() {
+            let currentIndex = currentRange.location
+            let newIndex = WordMotionLogic.getEndOfWordIndex(text: text, currentIndex: currentIndex)
+             if newIndex != currentIndex {
+                 setSelectedRange(CFRange(location: newIndex, length: 0))
+                 return
+             }
+        }
+        // No good fallback system key for 'e' unfortunately.
+    }
+    
+    func moveToLineStart() { // 0
+        if let text = getText(), let currentRange = getSelectedRange() {
+             let currentIndex = currentRange.location
+             let newIndex = WordMotionLogic.getLineStartIndex(text: text, currentIndex: currentIndex)
+             if newIndex != currentIndex {
+                 setSelectedRange(CFRange(location: newIndex, length: 0))
+                 return
+             }
+        }
+        // Fallback: Cmd+Left
+        simulateKeyPress(keyCode: 123, flags: .maskCommand)
+    }
+    
+    func moveToLineEnd() { // $
+        if let text = getText(), let currentRange = getSelectedRange() {
+             let currentIndex = currentRange.location
+             let newIndex = WordMotionLogic.getLineEndIndex(text: text, currentIndex: currentIndex)
+             if newIndex != currentIndex {
+                 setSelectedRange(CFRange(location: newIndex, length: 0))
+                 return
+             }
+        }
+        // Fallback: Cmd+Right
+        simulateKeyPress(keyCode: 124, flags: .maskCommand)
+    }
+    
+    func moveToLineStartNonWhitespace() { // ^
+        if let text = getText(), let currentRange = getSelectedRange() {
+             let currentIndex = currentRange.location
+             let newIndex = WordMotionLogic.getLineFirstNonWhitespaceIndex(text: text, currentIndex: currentIndex)
+             if newIndex != currentIndex {
+                 setSelectedRange(CFRange(location: newIndex, length: 0))
+                 return
+             }
+        }
+        // Fallback approximation: Cmd+Left, then Option+Right? Too complex. Just Cmd+Left.
+        simulateKeyPress(keyCode: 123, flags: .maskCommand)
     }
     
     func getText() -> String? {

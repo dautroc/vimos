@@ -61,25 +61,27 @@ class VimEngine: KeyboardHookDelegate {
                  accessibilityManager.moveWordBackward()
                  return true
             
+            case 14: // e
+                accessibilityManager.moveToEndOfWord()
+                return true
+            
             // Advanced Motions
-            case 29: // 0 (Zero) - Go to start of line (approximated as start of text for now or simulated Cmd+Left)
-                 // Or better: use AX to set range to 0?
-                 // Let's use AX text reading for '0' as a demo
-                 if let text = accessibilityManager.getText() {
-                     // For 0, we want line start. Since we don't have multiline parsing yet, let's do "Start of Line" via simulation or just Start of Text via AX.
-                     // Simulating Cmd+Left is easier for "Start of Line".
-                     // But to prove AX works, let's try to jump to start of text [0,0]
-                     let range = CFRange(location: 0, length: 0)
-                     accessibilityManager.setSelectedRange(range)
-                 }
+            case 29: // 0 (Zero) 
+                 accessibilityManager.moveToLineStart()
                  return true
-                 
-            case 22: // 6 (Shift+4 = $)
-                 return true
-                 
-            case 1: // s
-                 return true
-                 
+            
+            case 21: // 4. Check for Shift ($)
+                if flags.contains(.maskShift) {
+                    accessibilityManager.moveToLineEnd()
+                    return true
+                }
+                
+            case 22: // 6. Check for Shift (^)
+                if flags.contains(.maskShift) {
+                    accessibilityManager.moveToLineStartNonWhitespace()
+                    return true
+                }
+                
             // Passthrough for simulated arrow keys (so we don't block our own movements)
             case 123, 124, 125, 126:
                 return false

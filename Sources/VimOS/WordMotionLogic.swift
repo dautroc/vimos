@@ -67,6 +67,81 @@ class WordMotionLogic {
         return i
     }
     
+    // MARK: - Advanced Motions
+    
+    static func getEndOfWordIndex(text: String, currentIndex: Int) -> Int {
+        let unicodeScalars = Array(text.unicodeScalars)
+        guard currentIndex + 1 < unicodeScalars.count else { return currentIndex }
+        
+        var i = currentIndex + 1
+        
+        // 1. Skip whitespace
+        while i < unicodeScalars.count && getCharType(unicodeScalars[i]) == .whitespace {
+            i += 1
+        }
+        
+        if i >= unicodeScalars.count { return i - 1 }
+        
+        let startType = getCharType(unicodeScalars[i])
+        
+        // 2. Consume word
+        while i < unicodeScalars.count && getCharType(unicodeScalars[i]) == startType {
+            i += 1
+        }
+        
+        // Return index of last character
+        // Vim 'e' lands ON the last character. In caret systems, that usually means
+        // after the character if we want to be "at the end".
+        // However, technically if we are "on" it, we are before it in terms of "insert".
+        // But user specifically requested "This|" (after s).
+        return i
+    }
+    
+    static func getLineStartIndex(text: String, currentIndex: Int) -> Int {
+        // '0' -> Search backwards for newline
+        let unicodeScalars = Array(text.unicodeScalars)
+        var i = currentIndex
+        
+        while i > 0 {
+            if unicodeScalars[i - 1] == "\n" {
+                return i
+            }
+            i -= 1
+        }
+        return 0
+    }
+    
+    static func getLineEndIndex(text: String, currentIndex: Int) -> Int {
+        // '$' -> Search forwards for newline
+        let unicodeScalars = Array(text.unicodeScalars)
+        var i = currentIndex
+        
+        while i < unicodeScalars.count {
+            if unicodeScalars[i] == "\n" {
+                return i
+            }
+            i += 1
+        }
+        return unicodeScalars.count
+    }
+    
+    static func getLineFirstNonWhitespaceIndex(text: String, currentIndex: Int) -> Int {
+        // '^' -> Start of line + skip whitespace
+        let startOfLine = getLineStartIndex(text: text, currentIndex: currentIndex)
+        let unicodeScalars = Array(text.unicodeScalars)
+        
+        var i = startOfLine
+        while i < unicodeScalars.count {
+            let char = unicodeScalars[i]
+            if char == "\n" { return i } // Empty line
+            if getCharType(char) != .whitespace {
+                return i
+            }
+            i += 1
+        }
+        return i
+    }
+    
     private enum CharType {
         case alphanumeric
         case punctuation
