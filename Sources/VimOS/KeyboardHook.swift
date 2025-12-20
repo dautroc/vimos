@@ -57,6 +57,12 @@ class KeyboardHook {
                     return Unmanaged.passUnretained(event)
                 }
                 
+                // IGNORE SIMULATED EVENTS (VimOS Magic Number)
+                if event.getIntegerValueField(.eventSourceUserData) == 0x555 {
+                    return Unmanaged.passUnretained(event)
+                }
+                
+                // Process key event through Delegate (VimEngine)
                 if hook.delegate?.handle(keyEvent: event) == true {
                     return nil // Swallow event
                 }

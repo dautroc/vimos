@@ -10,6 +10,31 @@ enum Direction {
 
 class AccessibilityManager {
     
+    private var isBlockCursor = false
+    
+    func setBlockCursor(_ enabled: Bool) {
+        isBlockCursor = enabled
+        // Refresh current cursor if possible
+        if let currentRange = getSelectedRange() {
+            setCursor(at: currentRange.location)
+        }
+    }
+    
+    // Helper to set cursor respecting block mode
+    private func setCursor(at index: Int) {
+        var length = 0
+        if isBlockCursor {
+            // Check bounds: don't select newline or OOB
+            if let text = getText(), index < text.count {
+               // Only block select if not at very end (unless we want to block select the newline? rare)
+               // Vim usually doesn't select the newline character visually in the same way.
+               // Let's safe check index vs text count
+               length = 1
+            }
+        }
+        setSelectedRange(CFRange(location: index, length: length))
+    }
+
     // MARK: - Core AX wrappers
     
     private func getFocusedElement() -> AXUIElement? {
@@ -46,7 +71,7 @@ class AccessibilityManager {
             let currentIndex = currentRange.location
             let newIndex = WordMotionLogic.getNextWordIndex(text: text, currentIndex: currentIndex)
             if newIndex != currentIndex {
-                setSelectedRange(CFRange(location: newIndex, length: 0))
+                setCursor(at: newIndex)
                 return
             }
         }
@@ -60,7 +85,7 @@ class AccessibilityManager {
              let currentIndex = currentRange.location
              let newIndex = WordMotionLogic.getPrevWordIndex(text: text, currentIndex: currentIndex)
              if newIndex != currentIndex {
-                 setSelectedRange(CFRange(location: newIndex, length: 0))
+                 setCursor(at: newIndex)
                  return
              }
         }
@@ -74,7 +99,7 @@ class AccessibilityManager {
             let currentIndex = currentRange.location
             let newIndex = WordMotionLogic.getEndOfWordIndex(text: text, currentIndex: currentIndex)
              if newIndex != currentIndex {
-                 setSelectedRange(CFRange(location: newIndex, length: 0))
+                 setCursor(at: newIndex)
                  return
              }
         }
@@ -88,7 +113,7 @@ class AccessibilityManager {
              let currentIndex = currentRange.location
              let newIndex = WordMotionLogic.getLineStartIndex(text: text, currentIndex: currentIndex)
              if newIndex != currentIndex {
-                 setSelectedRange(CFRange(location: newIndex, length: 0))
+                 setCursor(at: newIndex)
                  return
              }
         }
@@ -101,7 +126,7 @@ class AccessibilityManager {
              let currentIndex = currentRange.location
              let newIndex = WordMotionLogic.getLineEndIndex(text: text, currentIndex: currentIndex)
              if newIndex != currentIndex {
-                 setSelectedRange(CFRange(location: newIndex, length: 0))
+                 setCursor(at: newIndex)
                  return
              }
         }
@@ -114,7 +139,7 @@ class AccessibilityManager {
              let currentIndex = currentRange.location
              let newIndex = WordMotionLogic.getLineFirstNonWhitespaceIndex(text: text, currentIndex: currentIndex)
              if newIndex != currentIndex {
-                 setSelectedRange(CFRange(location: newIndex, length: 0))
+                 setCursor(at: newIndex)
                  return
              }
         }
@@ -133,6 +158,55 @@ class AccessibilityManager {
     func moveToEndOfDocument() { // G
         // Standard macOS is Cmd+Down Arrow.
         simulateKeyPress(keyCode: 125, flags: .maskCommand)
+    }
+    
+    // MARK: - Edit Operations
+    
+    func deleteCurrentCharacter() { // x
+        // Try AX Selection Delete first?
+        // Actually, simulating Forward Delete (117) is usually safe if we are not at EOL.
+        // But to be robust against "Char Before" issues (Backspace), we stick to 117.
+        simulateKeyPress(keyCode: 117)
+    }
+    
+    func replaceCurrentCharacter(with charCode: CGKeyCode, flags: CGEventFlags) { // r + char
+        // Attempt AX replacement first (Cleanest)
+        // 1. Convert charCode to string? (Hard without mapping, so let's skip pure AX text injection for now unless we have the char)
+        // Since we only have keycode, we depend on simulation for input.
+        
+        // Strategy:
+        // 1. Select the character (Block Mode guarantees this if working).
+        // 2. Simulate User Input (Let the OS handler replacement).
+        //    If we handle the keypress simulation correctly, it enters text.
+        //    If we have a selection, enterting text REPLACES the selection.
+        
+        // So:
+        // 1. Selection is already [i, 1] (Block Cursor).
+        // 2. Simulate Key Press (New Char).
+        //    -> This replaces the selection with New Char.
+        //    -> Cursor automatically moves to after New Char.
+        // 3. Move Left (to stay on the char).
+        
+        // We do NOT need to delete explicitly if we have a selection!
+        // But if Fallback (No Selection / AX Fail):
+        // Caret is A|B.
+        // We need to delete B, then insert.
+        // So Forward Delete (117) is required.
+        
+        if let range = getSelectedRange(), range.length > 0 {
+            // We have a selection (Block Cursor working).
+            // Just typing replaces it.
+            simulateKeyPress(keyCode: charCode, flags: flags)
+        } else {
+            // Fallback: No selection. We are A|B.
+            // 1. Forward Delete (remove B).
+            simulateKeyPress(keyCode: 117)
+            // 2. Insert New Char.
+            simulateKeyPress(keyCode: charCode, flags: flags)
+        }
+        
+        // 3. Move cursor back left to stay on the new char
+        moveCursor(.left)
     }
     
     // MARK: - Text Access
@@ -166,6 +240,21 @@ class AccessibilityManager {
     // MARK: - Movement simulation (Fallback)
     
     func moveCursor(_ direction: Direction) {
+        // Try AX for Left/Right to preserve block cursor
+        if direction == .left || direction == .right {
+            if let text = getText(), let range = getSelectedRange() {
+                 var newIndex = range.location
+                 if direction == .left {
+                     newIndex = max(0, newIndex - 1)
+                 } else { // Right
+                      newIndex = min(text.count, newIndex + 1)
+                 }
+                 setCursor(at: newIndex)
+                 return
+            }
+        }
+        
+        // Fallback: Simulate Arrow Keys
         let keyCode: CGKeyCode
         switch direction {
         case .left: keyCode = 123
@@ -185,9 +274,11 @@ class AccessibilityManager {
         
         let keyDown = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: true)
         keyDown?.flags = flags
+        keyDown?.setIntegerValueField(.eventSourceUserData, value: 0x555) // Magic number for VimOS simulation
         
         let keyUp = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: false)
         keyUp?.flags = flags
+        keyUp?.setIntegerValueField(.eventSourceUserData, value: 0x555)
         
         keyDown?.post(tap: .cghidEventTap)
         keyUp?.post(tap: .cghidEventTap)

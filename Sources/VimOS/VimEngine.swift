@@ -9,16 +9,23 @@ class VimEngine: KeyboardHookDelegate {
     private var mode: VimMode = .insert
     private let accessibilityManager = AccessibilityManager()
     private var lastKeyCode: Int? // Simple buffer for 'gg'
+    private var isWaitingForReplaceChar = false // For 'r' generic command
 
     func handle(keyEvent: CGEvent) -> Bool {
         let flags = keyEvent.flags
         let keyCode = keyEvent.getIntegerValueField(.keyboardEventKeycode)
+        
+        // ... (Mode switching logic remains)
         
         // Toggle Mode: Caps Lock (example) or Ctrl-[ (Esc)
         // For simplicity using Escape (53) to enter Normal and 'i' (34) to enter Insert
         
         // Monitor for Mode Switch
         if keyCode == 53 { // ESC
+            if isWaitingForReplaceChar {
+                isWaitingForReplaceChar = false // Cancel 'r'
+                return true
+            }
             if mode == .insert {
                 switchMode(to: .normal)
                 return true // Swallow ESC
@@ -26,6 +33,15 @@ class VimEngine: KeyboardHookDelegate {
         }
 
         if mode == .normal {
+            // Handle 'r' Waiting State
+            if isWaitingForReplaceChar {
+                // Perform replacement with the pressed key
+                // Convert event to character if possible, or just pass keycode/flags
+                accessibilityManager.replaceCurrentCharacter(with: CGKeyCode(keyCode), flags: flags)
+                isWaitingForReplaceChar = false
+                return true // Swallow the character typed (since we re-injected it via simulation)
+            }
+            
             // Handle Normal Mode Commands
             
             // 'i' to insert
@@ -103,9 +119,18 @@ class VimEngine: KeyboardHookDelegate {
                     accessibilityManager.moveToLineStartNonWhitespace()
                     return true
                 }
+            
+            // Edit Commands
+            case 7: // x (Cut/Delete char)
+                accessibilityManager.deleteCurrentCharacter()
+                return true
                 
-            // Passthrough for simulated arrow keys (so we don't block our own movements)
-            case 123, 124, 125, 126:
+            case 15: // r (Replace)
+                isWaitingForReplaceChar = true
+                return true
+                
+            // Passthrough for simulated arrow keys and deletes (so we don't block our own actions)
+            case 123, 124, 125, 126, 51, 117:
                 return false
                  
             default:
@@ -121,6 +146,13 @@ class VimEngine: KeyboardHookDelegate {
     private func switchMode(to newMode: VimMode) {
         mode = newMode
         print("Switched to \(mode)")
-        // Visual feedback could be added here (e.g. status bar icon)
+        
+        if mode == .normal {
+            // Vim Behavior: When entering Normal mode, cursor moves one step left.
+            accessibilityManager.moveCursor(.left)
+            accessibilityManager.setBlockCursor(true)
+        } else {
+            accessibilityManager.setBlockCursor(false)
+        }
     }
 }
