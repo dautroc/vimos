@@ -41,7 +41,7 @@ class AccessibilityManager {
         }
     }
     
-    func prepareForInsertMode() {
+    func prepareForInsertMode(collapseSelection: Bool = true) {
         // Atomic transition to Insert Mode.
         // We want to collapse the selection to the start (standard Vim 'i' behavior).
         // Simulating the Left Arrow is the most robust way to do this in macOS apps
@@ -50,9 +50,11 @@ class AccessibilityManager {
         visualAnchorIndex = nil
         isBlockCursor = false
         
-        if let currentRange = getSelectedRange(), currentRange.length > 0 {
-             // Simulate Left Arrow to collapse to start
-             simulateKeyPress(keyCode: 123)
+        if collapseSelection {
+            if let currentRange = getSelectedRange(), currentRange.length > 0 {
+                 // Simulate Left Arrow to collapse to start
+                 simulateKeyPress(keyCode: 123)
+            }
         }
     }
     
@@ -199,7 +201,8 @@ class AccessibilityManager {
     func moveToLineEnd() { // $
         if let text = getText(), let currentRange = getSelectedRange() {
              let currentIndex = getActualCursorIndex(from: currentRange)
-             let newIndex = WordMotionLogic.getLineEndIndex(text: text, currentIndex: currentIndex)
+             // Use Visual Line End (Last character) instead of Newline index
+             let newIndex = WordMotionLogic.getVisualLineEndIndex(text: text, currentIndex: currentIndex)
              if newIndex != currentIndex {
                  setCursor(at: newIndex)
                  return
@@ -207,6 +210,25 @@ class AccessibilityManager {
         }
         // Fallback: Cmd+Right
         simulateKeyPress(keyCode: 124, flags: .maskCommand)
+    }
+    
+    /// Selects the content of the current line (excluding newline).
+    /// Returns true if content was selected (length > 0), false if line is empty (length 0).
+    func selectCurrentLineContent() -> Bool {
+        guard let text = getText(), let currentRange = getSelectedRange() else { return false }
+        let currentIndex = getActualCursorIndex(from: currentRange)
+        
+        let start = WordMotionLogic.getLineStartIndex(text: text, currentIndex: currentIndex)
+        let end = WordMotionLogic.getLineEndIndex(text: text, currentIndex: currentIndex)
+        
+        // Select [start, end)
+        let length = max(0, end - start)
+        
+        if length > 0 {
+             setSelectedRange(CFRange(location: start, length: length))
+             return true
+        }
+        return false
     }
     
     func moveToLineStartNonWhitespace() { // ^

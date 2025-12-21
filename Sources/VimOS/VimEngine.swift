@@ -6,11 +6,18 @@ enum VimMode {
     case visual
 }
 
+enum VimOperator {
+    case change
+}
+
 class VimEngine: KeyboardHookDelegate {
     private var mode: VimMode = .insert
     private let accessibilityManager = AccessibilityManager()
     private var lastKeyCode: Int? // Simple buffer for 'gg'
     private var isWaitingForReplaceChar = false // For 'r' generic command
+    
+    // Operator Pending State
+    private var pendingOperator: VimOperator? = nil
 
     func handle(keyEvent: CGEvent) -> Bool {
         let flags = keyEvent.flags
@@ -18,15 +25,15 @@ class VimEngine: KeyboardHookDelegate {
         
         // print("DEBUG: Key: \(keyCode), Mode: \(mode)")
         
-        // ... (Mode switching logic remains)
-        
-        // Toggle Mode: Caps Lock (example) or Ctrl-[ (Esc)
-        // For simplicity using Escape (53) to enter Normal and 'i' (34) to enter Insert
-        
-        // Monitor for Mode Switch
+        // Mode Switching Logic
         if keyCode == 53 { // ESC
             if isWaitingForReplaceChar {
-                isWaitingForReplaceChar = false // Cancel 'r'
+                isWaitingForReplaceChar = false
+                return true
+            }
+            if pendingOperator != nil {
+                pendingOperator = nil
+                accessibilityManager.exitVisualMode()
                 return true
             }
             if mode == .insert {
@@ -37,22 +44,43 @@ class VimEngine: KeyboardHookDelegate {
                 switchMode(to: .normal)
                 return true
             }
+            lastKeyCode = nil // Clear buffers
         }
 
         if mode == .normal || mode == .visual {
-            // Handle 'r' Waiting State (Normal/Visual?) - usually Normal only
+            // Handle 'r' Waiting State
             if mode == .normal && isWaitingForReplaceChar {
-                // Perform replacement with the pressed key
-                // Convert event to character if possible, or just pass keycode/flags
                 accessibilityManager.replaceCurrentCharacter(with: CGKeyCode(keyCode), flags: flags)
                 isWaitingForReplaceChar = false
-                return true // Swallow the character typed (since we re-injected it via simulation)
+                return true
             }
             
-            // Handle Normal Mode Commands
+            // Visual Mode 'c' (Change Selection)
+            if mode == .visual && keyCode == 8 { // c
+                accessibilityManager.deleteCurrentCharacter()
+                // Do not collapse selection as it is deleted
+                switchMode(to: .insert, collapseSelection: false)
+                return true
+            }
             
-            // 'i' to insert (Normal or Visual)
-            // In Visual mode, this mimics 'c' (change selection) effectively if the user types next.
+            // Normal Mode 'c' (Change Operator)
+            if mode == .normal && keyCode == 8 { // c
+                if pendingOperator == .change {
+                    // 'cc' (Change Line)
+                    // Select content of line (excluding newline). 
+                    // If content exists, delete it. If empty line, just enter insert.
+                    if accessibilityManager.selectCurrentLineContent() {
+                        accessibilityManager.deleteCurrentCharacter()
+                    }
+                    switchMode(to: .insert, collapseSelection: false)
+                    pendingOperator = nil
+                    return true
+                }
+                pendingOperator = .change
+                return true
+            }
+            
+            // 'i' to insert
             if (mode == .normal || mode == .visual) && keyCode == 34 {
                 switchMode(to: .insert)
                 return true
@@ -71,12 +99,12 @@ class VimEngine: KeyboardHookDelegate {
             // Special handling for 'g' (5)
             if keyCode == 5 {
                 if flags.contains(.maskShift) { // 'G'
-                     accessibilityManager.moveToEndOfDocument()
+                     executeMotion { self.accessibilityManager.moveToEndOfDocument() }
                      lastKeyCode = nil
                      return true
                 } else { // 'g'
                     if lastKeyCode == 5 { // 'gg'
-                        accessibilityManager.moveToStartOfDocument()
+                        executeMotion { self.accessibilityManager.moveToStartOfDocument() }
                         lastKeyCode = nil
                         return true
                     } else {
@@ -85,64 +113,56 @@ class VimEngine: KeyboardHookDelegate {
                     }
                 }
             } else {
-                // If we had a buffered 'g' and pressed something else,
-                // technically we should execute the partial command or ignore.
-                // Vim behaviors vary (e.g. 'gh' might mean something).
-                // For now, clear buffer.
                 lastKeyCode = nil
             }
 
-            // Movements
+            // Motions
             switch keyCode {
-            // ... (h, j, k, l, w, b, etc remain)
-
             case 4: // h
-                accessibilityManager.moveCursor(.left)
+                executeMotion { self.accessibilityManager.moveCursor(.left) }
                 return true
             case 38: // j
-                accessibilityManager.moveCursor(.down)
+                executeMotion { self.accessibilityManager.moveCursor(.down) }
                 return true
             case 40: // k
-                accessibilityManager.moveCursor(.up)
+                executeMotion { self.accessibilityManager.moveCursor(.up) }
                 return true
             case 37: // l
-                accessibilityManager.moveCursor(.right)
+                executeMotion { self.accessibilityManager.moveCursor(.right) }
                 return true
             
             // Word Motions
             case 13: // w
-                accessibilityManager.moveWordForward()
+                executeMotion { self.accessibilityManager.moveWordForward() }
                 return true
             case 11: // b
-                 accessibilityManager.moveWordBackward()
-                 return true
-            
+                executeMotion { self.accessibilityManager.moveWordBackward() }
+                return true
             case 14: // e
-                accessibilityManager.moveToEndOfWord()
+                executeMotion { self.accessibilityManager.moveToEndOfWord() }
                 return true
             
             // Advanced Motions
             case 29: // 0 (Zero) 
-                 accessibilityManager.moveToLineStart()
+                 executeMotion { self.accessibilityManager.moveToLineStart() }
                  return true
             
             case 21: // 4. Check for Shift ($)
                 if flags.contains(.maskShift) {
-                    accessibilityManager.moveToLineEnd()
+                    executeMotion { self.accessibilityManager.moveToLineEnd() }
                     return true
                 }
                 
             case 22: // 6. Check for Shift (^)
                 if flags.contains(.maskShift) {
-                    accessibilityManager.moveToLineStartNonWhitespace()
+                    executeMotion { self.accessibilityManager.moveToLineStartNonWhitespace() }
                     return true
                 }
             
             // Edit Commands
-            case 7: // x (Cut/Delete char or selection)
+            case 7: // x
                 if mode == .visual {
-                    // In visual mode, x deletes the selection
-                     accessibilityManager.deleteCurrentCharacter() // This actually sends delete key, which works for selection too
+                     accessibilityManager.deleteCurrentCharacter()
                      switchMode(to: .normal)
                 } else {
                     accessibilityManager.deleteCurrentCharacter()
@@ -154,33 +174,52 @@ class VimEngine: KeyboardHookDelegate {
                     isWaitingForReplaceChar = true
                     return true
                 }
-                return true // Ignore in visual for now
+                return true
                 
             case 2: // d (Delete)
                  if mode == .visual {
-                     accessibilityManager.deleteCurrentCharacter() // Delete selection
+                     accessibilityManager.deleteCurrentCharacter()
                      switchMode(to: .normal)
                      return true
                  }
-                 // Normal mode 'd' usually waits for motion. Not implemented yet fully?
-                 // For now, ignore or implement 'dd'?
                  return true
                 
-            // Passthrough for simulated arrow keys and deletes (so we don't block our own actions)
             case 123, 124, 125, 126, 51, 117:
                 return false
                  
             default:
-                // Swallow other keys in normal/visual mode for now to prevent typing
-               // Or maybe pass through modifiers?
                 return true
             }
         }
         
         return false // Passthrough in Insert Mode
     }
+    
+    private func executeMotion(_ motion: () -> Void) {
+        if let op = pendingOperator {
+            // Operator Pending Mode
+            // 1. Enter pseudo-visual mode logic to capture range
+            accessibilityManager.enterVisualMode()
+            
+            // 2. Perform Motion (extending selection)
+            motion()
+            
+            // 3. Execute Operator
+            if op == .change {
+                accessibilityManager.deleteCurrentCharacter()
+                switchMode(to: .insert, collapseSelection: false)
+            }
+            
+            pendingOperator = nil
+        } else {
+            motion()
+        }
+    }
 
-    private func switchMode(to newMode: VimMode) {
+    private func switchMode(to newMode: VimMode, collapseSelection: Bool = true) {
+        // Clear any pending operator when switching modes to avoid state leaks
+        pendingOperator = nil
+        
         let previousMode = mode
         mode = newMode
         print("Switched to \(mode)")
@@ -196,11 +235,11 @@ class VimEngine: KeyboardHookDelegate {
              
         } else if mode == .visual {
             accessibilityManager.enterVisualMode()
-            accessibilityManager.setBlockCursor(true) // Visual mode also uses block-like selection usually
+            accessibilityManager.setBlockCursor(true)
             
         } else {
             // Switching to Insert Mode
-            accessibilityManager.prepareForInsertMode()
+            accessibilityManager.prepareForInsertMode(collapseSelection: collapseSelection)
         }
     }
 }

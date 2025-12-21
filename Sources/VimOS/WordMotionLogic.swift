@@ -125,6 +125,11 @@ class WordMotionLogic {
         return unicodeScalars.count
     }
     
+    static func getVisualLineEndIndex(text: String, currentIndex: Int) -> Int {
+        let limit = getLineEndIndex(text: text, currentIndex: currentIndex)
+        return max(0, limit - 1)
+    }
+    
     static func getLineFirstNonWhitespaceIndex(text: String, currentIndex: Int) -> Int {
         // '^' -> Start of line + skip whitespace
         let startOfLine = getLineStartIndex(text: text, currentIndex: currentIndex)
