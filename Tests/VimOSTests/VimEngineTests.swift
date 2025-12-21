@@ -190,6 +190,21 @@ class VimEngineTests {
         assertTrue(mockAX.methodCalls.contains("prepareForInsertMode(collapseSelection: false)"))
     }
     
+    func testChangeRestOfLine() {
+        setUp()
+        print("Running testChangeRestOfLine...")
+        
+        _ = simulateKey(53) // ESC
+        
+        // C (Shift + c)
+        _ = simulateKey(8, flags: .maskShift) // C
+        
+        assertTrue(mockAX.methodCalls.contains("enterVisualMode"))
+        assertTrue(mockAX.methodCalls.contains("moveToLineEnd"))
+        assertTrue(mockAX.methodCalls.contains("deleteCurrentCharacter"))
+        assertTrue(mockAX.methodCalls.contains("prepareForInsertMode(collapseSelection: false)"))
+    }
+    
     func testGlobalMotions() {
         setUp()
         print("Running testGlobalMotions...")
@@ -234,6 +249,7 @@ class VimEngineTests {
         testVisualLineModeToggle()
         testOperators()
         testChangeLine()
+        testChangeRestOfLine()
         testGlobalMotions()
         testNewLineOps()
         

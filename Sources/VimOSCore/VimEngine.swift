@@ -101,6 +101,13 @@ public class VimEngine: KeyboardHookDelegate {
             
             // Normal Mode 'c' (Change Operator)
             if mode == .normal && keyCode == 8 { // c
+                if flags.contains(.maskShift) {
+                    // 'C' - Change to end of line (c$)
+                    pendingOperator = .change
+                    executeMotion { self.accessibilityManager.moveToLineEnd() }
+                    return true
+                }
+                
                 if pendingOperator == .change {
                     // 'cc' (Change Line)
                     if accessibilityManager.selectCurrentLineContent() {
