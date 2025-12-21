@@ -11,6 +11,7 @@ enum Direction {
 class AccessibilityManager {
     
     private var isBlockCursor = false
+    private var visualAnchorIndex: Int? // Anchor point for Visual Mode
     
     func setBlockCursor(_ enabled: Bool) {
         isBlockCursor = enabled
@@ -20,19 +21,76 @@ class AccessibilityManager {
         }
     }
     
-    // Helper to set cursor respecting block mode
-    private func setCursor(at index: Int) {
-        var length = 0
-        if isBlockCursor {
-            // Check bounds: don't select newline or OOB
-            if let text = getText(), index < text.count {
-               // Only block select if not at very end (unless we want to block select the newline? rare)
-               // Vim usually doesn't select the newline character visually in the same way.
-               // Let's safe check index vs text count
-               length = 1
-            }
+    // MARK: - Visual Mode
+    
+    func enterVisualMode() {
+        if let currentRange = getSelectedRange() {
+            visualAnchorIndex = currentRange.location
         }
-        setSelectedRange(CFRange(location: index, length: length))
+    }
+    
+    func exitVisualMode() {
+        // Collapse selection to cursor
+        if let currentRange = getSelectedRange() {
+            let activeIndex = getActualCursorIndex(from: currentRange)
+            // Clear anchor first so setCursor behaves normally
+            visualAnchorIndex = nil
+            setCursor(at: activeIndex)
+        } else {
+            visualAnchorIndex = nil
+        }
+    }
+    
+    func prepareForInsertMode() {
+        // Atomic transition to Insert Mode.
+        // We want to collapse the selection to the start (standard Vim 'i' behavior).
+        // Simulating the Left Arrow is the most robust way to do this in macOS apps
+        // as it reliably collapses any selection (Visual or Block) to its start index.
+        
+        visualAnchorIndex = nil
+        isBlockCursor = false
+        
+        if let currentRange = getSelectedRange(), currentRange.length > 0 {
+             // Simulate Left Arrow to collapse to start
+             simulateKeyPress(keyCode: 123)
+        }
+    }
+    
+    // Helper to set cursor respecting block mode and visual mode
+    private func setCursor(at index: Int) {
+        if let anchor = visualAnchorIndex {
+            // Visual Mode: Select from anchor to index
+            let start = min(anchor, index)
+            let end = max(anchor, index)
+            // Range length is difference + 1 to include the character under cursor (standard visual)
+            // But AX ranges are typically [start, length).
+            // If anchor=0, index=2. Text: "ABC". We want "ABC" selected? Or "AB"?
+            // Vim visual: if I am at A, press v, move to C. Selection covers A,B,C.
+            // Length = abs(anchor - index) + 1
+            
+            // However, we must be careful with bounds.
+            var length = (end - start) + 1
+            
+            // Check text bounds to avoid overflow
+             if let text = getText() {
+                if start + length > text.count {
+                     length = text.count - start
+                }
+             }
+             
+            setSelectedRange(CFRange(location: start, length: length))
+            
+        } else {
+            // Normal/Insert Mode
+            var length = 0
+            if isBlockCursor {
+                // Check bounds: don't select newline or OOB
+                if let text = getText(), index < text.count {
+                   length = 1
+                }
+            }
+            setSelectedRange(CFRange(location: index, length: length))
+        }
     }
 
     // MARK: - Core AX wrappers
@@ -66,9 +124,26 @@ class AccessibilityManager {
     
     // MARK: - Word Operations
     
+    // Helper to determine the "active" cursor end in Visual Mode
+    private func getActualCursorIndex(from range: CFRange) -> Int {
+        if let anchor = visualAnchorIndex {
+            // If the selection starts at the anchor, the cursor is at the end.
+            if range.location == anchor {
+                // Forward selection: Cursor is on the last character of the selection.
+                // Range [2, 1] means char at 2 is selected. Cursor is at 2.
+                // Range [2, 0] means cursor at 2.
+                return range.length > 0 ? range.location + range.length - 1 : range.location
+            }
+            // If the selection ends at (or near) the anchor, the cursor is at the start (range.location).
+            // E.g. Anchor=10, Range(5, 5) -> Ends at 10. Cursor is 5.
+            return range.location
+        }
+        return range.location
+    }
+    
     func moveWordForward() {
         if let text = getText(), let currentRange = getSelectedRange() {
-            let currentIndex = currentRange.location
+            let currentIndex = getActualCursorIndex(from: currentRange)
             let newIndex = WordMotionLogic.getNextWordIndex(text: text, currentIndex: currentIndex)
             if newIndex != currentIndex {
                 setCursor(at: newIndex)
@@ -82,7 +157,7 @@ class AccessibilityManager {
     
     func moveWordBackward() {
         if let text = getText(), let currentRange = getSelectedRange() {
-             let currentIndex = currentRange.location
+             let currentIndex = getActualCursorIndex(from: currentRange)
              let newIndex = WordMotionLogic.getPrevWordIndex(text: text, currentIndex: currentIndex)
              if newIndex != currentIndex {
                  setCursor(at: newIndex)
@@ -96,7 +171,7 @@ class AccessibilityManager {
     
     func moveToEndOfWord() {
         if let text = getText(), let currentRange = getSelectedRange() {
-            let currentIndex = currentRange.location
+            let currentIndex = getActualCursorIndex(from: currentRange)
             let newIndex = WordMotionLogic.getEndOfWordIndex(text: text, currentIndex: currentIndex)
              if newIndex != currentIndex {
                  setCursor(at: newIndex)
@@ -110,7 +185,7 @@ class AccessibilityManager {
     
     func moveToLineStart() { // 0
         if let text = getText(), let currentRange = getSelectedRange() {
-             let currentIndex = currentRange.location
+             let currentIndex = getActualCursorIndex(from: currentRange)
              let newIndex = WordMotionLogic.getLineStartIndex(text: text, currentIndex: currentIndex)
              if newIndex != currentIndex {
                  setCursor(at: newIndex)
@@ -123,7 +198,7 @@ class AccessibilityManager {
     
     func moveToLineEnd() { // $
         if let text = getText(), let currentRange = getSelectedRange() {
-             let currentIndex = currentRange.location
+             let currentIndex = getActualCursorIndex(from: currentRange)
              let newIndex = WordMotionLogic.getLineEndIndex(text: text, currentIndex: currentIndex)
              if newIndex != currentIndex {
                  setCursor(at: newIndex)
@@ -136,7 +211,7 @@ class AccessibilityManager {
     
     func moveToLineStartNonWhitespace() { // ^
         if let text = getText(), let currentRange = getSelectedRange() {
-             let currentIndex = currentRange.location
+             let currentIndex = getActualCursorIndex(from: currentRange)
              let newIndex = WordMotionLogic.getLineFirstNonWhitespaceIndex(text: text, currentIndex: currentIndex)
              if newIndex != currentIndex {
                  setCursor(at: newIndex)
@@ -241,9 +316,10 @@ class AccessibilityManager {
     
     func moveCursor(_ direction: Direction) {
         // Try AX for Left/Right to preserve block cursor
+        // AND ensure we calculate from the *active* cursor end in Visual Mode
         if direction == .left || direction == .right {
             if let text = getText(), let range = getSelectedRange() {
-                 var newIndex = range.location
+                 var newIndex = getActualCursorIndex(from: range)
                  if direction == .left {
                      newIndex = max(0, newIndex - 1)
                  } else { // Right
@@ -263,7 +339,14 @@ class AccessibilityManager {
         case .down: keyCode = 125
         }
         
-        simulateKeyPress(keyCode: keyCode)
+        // In Visual Mode, we must simulate Shift + Arrow to extend selection for Up/Down
+        // (Left/Right are handled above via AX usually, but if those fail (nil text), fallback handles them too)
+        var flags: CGEventFlags = []
+        if visualAnchorIndex != nil {
+            flags.insert(.maskShift)
+        }
+        
+        simulateKeyPress(keyCode: keyCode, flags: flags)
     }
     
     private func simulateKeyPress(keyCode: CGKeyCode, flags: CGEventFlags = []) {

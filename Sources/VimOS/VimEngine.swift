@@ -3,6 +3,7 @@ import Cocoa
 enum VimMode {
     case normal
     case insert
+    case visual
 }
 
 class VimEngine: KeyboardHookDelegate {
@@ -14,6 +15,8 @@ class VimEngine: KeyboardHookDelegate {
     func handle(keyEvent: CGEvent) -> Bool {
         let flags = keyEvent.flags
         let keyCode = keyEvent.getIntegerValueField(.keyboardEventKeycode)
+        
+        // print("DEBUG: Key: \(keyCode), Mode: \(mode)")
         
         // ... (Mode switching logic remains)
         
@@ -30,11 +33,15 @@ class VimEngine: KeyboardHookDelegate {
                 switchMode(to: .normal)
                 return true // Swallow ESC
             }
+            if mode == .visual {
+                switchMode(to: .normal)
+                return true
+            }
         }
 
-        if mode == .normal {
-            // Handle 'r' Waiting State
-            if isWaitingForReplaceChar {
+        if mode == .normal || mode == .visual {
+            // Handle 'r' Waiting State (Normal/Visual?) - usually Normal only
+            if mode == .normal && isWaitingForReplaceChar {
                 // Perform replacement with the pressed key
                 // Convert event to character if possible, or just pass keycode/flags
                 accessibilityManager.replaceCurrentCharacter(with: CGKeyCode(keyCode), flags: flags)
@@ -44,9 +51,20 @@ class VimEngine: KeyboardHookDelegate {
             
             // Handle Normal Mode Commands
             
-            // 'i' to insert
-            if keyCode == 34 {
+            // 'i' to insert (Normal or Visual)
+            // In Visual mode, this mimics 'c' (change selection) effectively if the user types next.
+            if (mode == .normal || mode == .visual) && keyCode == 34 {
                 switchMode(to: .insert)
+                return true
+            }
+            
+            // 'v' to toggle Visual Mode
+            if keyCode == 9 {
+                if mode == .visual {
+                    switchMode(to: .normal)
+                } else {
+                    switchMode(to: .visual)
+                }
                 return true
             }
             
@@ -121,20 +139,39 @@ class VimEngine: KeyboardHookDelegate {
                 }
             
             // Edit Commands
-            case 7: // x (Cut/Delete char)
-                accessibilityManager.deleteCurrentCharacter()
+            case 7: // x (Cut/Delete char or selection)
+                if mode == .visual {
+                    // In visual mode, x deletes the selection
+                     accessibilityManager.deleteCurrentCharacter() // This actually sends delete key, which works for selection too
+                     switchMode(to: .normal)
+                } else {
+                    accessibilityManager.deleteCurrentCharacter()
+                }
                 return true
                 
             case 15: // r (Replace)
-                isWaitingForReplaceChar = true
-                return true
+                if mode == .normal {
+                    isWaitingForReplaceChar = true
+                    return true
+                }
+                return true // Ignore in visual for now
+                
+            case 2: // d (Delete)
+                 if mode == .visual {
+                     accessibilityManager.deleteCurrentCharacter() // Delete selection
+                     switchMode(to: .normal)
+                     return true
+                 }
+                 // Normal mode 'd' usually waits for motion. Not implemented yet fully?
+                 // For now, ignore or implement 'dd'?
+                 return true
                 
             // Passthrough for simulated arrow keys and deletes (so we don't block our own actions)
             case 123, 124, 125, 126, 51, 117:
                 return false
                  
             default:
-                // Swallow other keys in normal mode for now to prevent typing
+                // Swallow other keys in normal/visual mode for now to prevent typing
                // Or maybe pass through modifiers?
                 return true
             }
@@ -144,15 +181,26 @@ class VimEngine: KeyboardHookDelegate {
     }
 
     private func switchMode(to newMode: VimMode) {
+        let previousMode = mode
         mode = newMode
         print("Switched to \(mode)")
         
         if mode == .normal {
             // Vim Behavior: When entering Normal mode, cursor moves one step left.
-            accessibilityManager.moveCursor(.left)
-            accessibilityManager.setBlockCursor(true)
+            // Only if coming from Insert
+            if previousMode == .insert {
+                 accessibilityManager.moveCursor(.left)
+            }
+             accessibilityManager.exitVisualMode()
+             accessibilityManager.setBlockCursor(true)
+             
+        } else if mode == .visual {
+            accessibilityManager.enterVisualMode()
+            accessibilityManager.setBlockCursor(true) // Visual mode also uses block-like selection usually
+            
         } else {
-            accessibilityManager.setBlockCursor(false)
+            // Switching to Insert Mode
+            accessibilityManager.prepareForInsertMode()
         }
     }
 }
