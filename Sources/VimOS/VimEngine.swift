@@ -18,6 +18,8 @@ class VimEngine: KeyboardHookDelegate {
     
     // Operator Pending State
     private var pendingOperator: VimOperator? = nil
+    private var isWaitingForTillChar = false // State for 't' command
+    private var isWaitingForTextObject = false // State for 'i' (inner) modifier
 
     func handle(keyEvent: CGEvent) -> Bool {
         let flags = keyEvent.flags
@@ -27,8 +29,10 @@ class VimEngine: KeyboardHookDelegate {
         
         // Mode Switching Logic
         if keyCode == 53 { // ESC
-            if isWaitingForReplaceChar {
+            if isWaitingForReplaceChar || isWaitingForTillChar || isWaitingForTextObject {
                 isWaitingForReplaceChar = false
+                isWaitingForTillChar = false
+                isWaitingForTextObject = false
                 return true
             }
             if pendingOperator != nil {
@@ -52,6 +56,27 @@ class VimEngine: KeyboardHookDelegate {
             if mode == .normal && isWaitingForReplaceChar {
                 accessibilityManager.replaceCurrentCharacter(with: CGKeyCode(keyCode), flags: flags)
                 isWaitingForReplaceChar = false
+                return true
+            }
+            
+            // Handle 't' Waiting State
+            if isWaitingForTillChar {
+                if let event = NSEvent(cgEvent: keyEvent), let char = event.characters, !char.isEmpty {
+                     // Use 'executeMotion' to properly handle Pending Operator (like 'c')
+                     executeMotion { self.accessibilityManager.moveToNextOccurrence(of: char, stopBefore: true) }
+                }
+                isWaitingForTillChar = false
+                return true
+            }
+            
+            // Handle Inner Object Waiting State
+            if isWaitingForTextObject {
+                if let event = NSEvent(cgEvent: keyEvent), let char = event.characters, !char.isEmpty {
+                    // This is a "Motion" that selects a range.
+                    // executeMotion will apply Pending Operator (delete and insert).
+                    executeMotion { self.accessibilityManager.selectInnerObject(char: char) }
+                }
+                isWaitingForTextObject = false
                 return true
             }
             
@@ -80,8 +105,13 @@ class VimEngine: KeyboardHookDelegate {
                 return true
             }
             
-            // 'i' to insert
+            // 'i' to insert or Inner Object Modifier
             if (mode == .normal || mode == .visual) && keyCode == 34 {
+                if pendingOperator != nil || mode == .visual {
+                    // ci... or vi... -> i means "inner"
+                    isWaitingForTextObject = true
+                    return true
+                }
                 switchMode(to: .insert)
                 return true
             }
@@ -185,6 +215,10 @@ class VimEngine: KeyboardHookDelegate {
                     isWaitingForReplaceChar = true
                     return true
                 }
+                return true
+            
+            case 17: // t (Till motion)
+                isWaitingForTillChar = true
                 return true
                 
             case 2: // d (Delete)

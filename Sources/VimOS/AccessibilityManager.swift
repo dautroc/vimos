@@ -116,9 +116,12 @@ class AccessibilityManager {
         
         if result == .success, CFGetTypeID(rangeValue) == AXValueGetTypeID() {
             let axValue = rangeValue as! AXValue
-            var range = CFRange()
-            if AXValueGetValue(axValue, .cfRange, &range) {
-                return range
+            // Verify it holds a CFRange to avoid warnings/errors
+            if AXValueGetType(axValue) == .cfRange {
+                var range = CFRange()
+                if AXValueGetValue(axValue, .cfRange, &range) {
+                    return range
+                }
             }
         }
         return nil
@@ -255,6 +258,34 @@ class AccessibilityManager {
     func moveToEndOfDocument() { // G
         // Standard macOS is Cmd+Down Arrow.
         simulateKeyPress(keyCode: 125, flags: .maskCommand)
+    }
+    
+    // MARK: - Character Search Motions
+    
+    func moveToNextOccurrence(of char: String, stopBefore: Bool) {
+        if let text = getText(), let currentRange = getSelectedRange() {
+            let currentIndex = getActualCursorIndex(from: currentRange)
+            let newIndex = WordMotionLogic.getNextOccurrenceIndex(text: text, currentIndex: currentIndex, targetChar: char, stopBefore: stopBefore)
+            
+            if newIndex != currentIndex {
+                setCursor(at: newIndex)
+            }
+        }
+    }
+    
+    func selectInnerObject(char: String) {
+        if let text = getText(), let currentRange = getSelectedRange() {
+            let currentIndex = getActualCursorIndex(from: currentRange)
+            
+            if let (start, end) = WordMotionLogic.getInnerObjectRange(text: text, currentIndex: currentIndex, targetChar: char) {
+                // Determine length. Inclusive indices: start=1, end=3 -> length 3 (1,2,3)
+                // Range(location: start, length: end - start + 1)
+                let length = (end - start) + 1
+                if length >= 0 {
+                    setSelectedRange(CFRange(location: start, length: length))
+                }
+            }
+        }
     }
     
     // MARK: - Edit Operations
