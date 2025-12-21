@@ -22,7 +22,7 @@ public protocol AccessibilityManagerProtocol: AnyObject {
     func moveToEndOfWord()
     func moveToLineStart()
     func moveToLineEnd()
-    func selectCurrentLineContent() -> Bool
+    func selectCurrentLineContent(includeNewline: Bool) -> Bool
     func moveToLineStartNonWhitespace()
     
     func moveToStartOfDocument()
@@ -39,6 +39,10 @@ public protocol AccessibilityManagerProtocol: AnyObject {
     
     func deleteVisualLine()
     func deleteCurrentCharacter()
+
+    func yank()
+    func yankCurrentLine(includeNewline: Bool)
+    func yankRestOfLine()
     func undo()
     func redo()
     func replaceCurrentCharacter(with charCode: CGKeyCode, flags: CGEventFlags)
@@ -203,7 +207,7 @@ public class AccessibilityManager: AccessibilityManagerProtocol {
         // but for Block Cursor visualization we usually want the character bounds.
         // We'll try to get bounds of the character at `cursorIndex`.
         
-        var length = 1
+        let length = 1
         if let text = getText() {
             if cursorIndex >= text.count {
                 // We are at the very end. 
@@ -211,7 +215,7 @@ public class AccessibilityManager: AccessibilityManagerProtocol {
                 // Or just the previous character.
                 if text.count > 0 {
                     let prevIndex = text.count - 1
-                    var prevRange = CFRange(location: prevIndex, length: 1)
+                    let prevRange = CFRange(location: prevIndex, length: 1)
                      if let rect = getBoundsFor(range: prevRange, element: element) {
                          // Shift it to the right approximately (width of char)
                          // This is a heuristic.
@@ -333,23 +337,28 @@ public class AccessibilityManager: AccessibilityManagerProtocol {
         simulateKeyPress(keyCode: 124, flags: .maskCommand)
     }
     
-    /// Selects the content of the current line (excluding newline).
-    /// Returns true if content was selected (length > 0), false if line is empty (length 0).
-    public func selectCurrentLineContent() -> Bool {
+    /// Selects the content of the current line.
+    /// - Parameter includeNewline: If true, includes the trailing newline character in the selection.
+    /// Returns true if selection was attempted.
+    public func selectCurrentLineContent(includeNewline: Bool = false) -> Bool {
         guard let text = getText(), let currentRange = getSelectedRange() else { return false }
         let currentIndex = getActualCursorIndex(from: currentRange)
         
         let start = WordMotionLogic.getLineStartIndex(text: text, currentIndex: currentIndex)
-        let end = WordMotionLogic.getLineEndIndex(text: text, currentIndex: currentIndex)
+        var end = WordMotionLogic.getLineEndIndex(text: text, currentIndex: currentIndex)
         
-        // Select [start, end)
+        if includeNewline {
+            let us = Array(text.utf16)
+            if end < us.count {
+                end += 1 // Include the newline character itself
+            }
+        }
+        
         let length = max(0, end - start)
         
-        if length > 0 {
-             setSelectedRange(CFRange(location: start, length: length))
-             return true
-        }
-        return false
+        // Always set the range even if length 0, to ensure we are yanking the correct line
+        setSelectedRange(CFRange(location: start, length: length))
+        return true
     }
     
     public func moveToLineStartNonWhitespace() { // ^
@@ -498,6 +507,94 @@ public class AccessibilityManager: AccessibilityManagerProtocol {
         // Actually, simulating Forward Delete (117) is usually safe if we are not at EOL.
         // But to be robust against "Char Before" issues (Backspace), we stick to 117.
         simulateKeyPress(keyCode: 117)
+    }
+    
+    public func yank() {
+        // Yank the current selection to the system clipboard
+        guard let element = getFocusedElement() else { return }
+        
+        var textToYank: String?
+        
+        // Method 1: AXSelectedTextAttribute (Best if app supports it)
+        var selectedTextValue: AnyObject?
+        let result = AXUIElementCopyAttributeValue(element, kAXSelectedTextAttribute as CFString, &selectedTextValue)
+        
+        if result == .success, let text = selectedTextValue as? String {
+            textToYank = text
+        } else {
+            // Method 2: Fallback to getting text from full value via selected range
+            // Useful for apps that don't correctly report kAXSelectedTextAttribute but do report Range
+            if let range = getSelectedRange(), let fullText = getText() {
+                let us = Array(fullText.utf16)
+                if range.location >= 0 && range.location + range.length <= us.count {
+                    let sub = us[range.location..<(range.location + range.length)]
+                    textToYank = String(utf16CodeUnits: Array(sub), count: sub.count)
+                }
+            }
+        }
+        
+        if let text = textToYank {
+            let pasteboard = NSPasteboard.general
+            pasteboard.clearContents()
+            pasteboard.setString(text, forType: .string)
+        } else {
+            // Method 3: Final fallback: Simulate Cmd+C
+            simulateKeyPress(keyCode: 8, flags: .maskCommand) // Cmd+C
+        }
+    }
+    
+    public func yankCurrentLine(includeNewline: Bool) {
+        guard let text = getText(), let currentRange = getSelectedRange() else { return }
+        let currentIndex = getActualCursorIndex(from: currentRange)
+        
+        let start = WordMotionLogic.getLineStartIndex(text: text, currentIndex: currentIndex)
+        var end = WordMotionLogic.getLineEndIndex(text: text, currentIndex: currentIndex)
+        
+        if includeNewline {
+            let us = Array(text.utf16)
+            if end < us.count {
+                end += 1 // Include newline
+            }
+        }
+        
+        let length = max(0, end - start)
+        
+        if length > 0 {
+            let us = Array(text.utf16)
+            if start + length <= us.count {
+                let sub = us[start..<(start + length)]
+                let textToYank = String(utf16CodeUnits: Array(sub), count: sub.count)
+                
+                let pasteboard = NSPasteboard.general
+                pasteboard.clearContents()
+                pasteboard.setString(textToYank, forType: .string)
+                // Do NOT print debug info
+            }
+        }
+        // If length is 0 (empty line and no newline), we yank nothing or a newline? Standard yy on completely empty buffer does nothing maybe?
+        // But usually there's a newline.
+    }
+    
+    public func yankRestOfLine() {
+         guard let text = getText(), let currentRange = getSelectedRange() else { return }
+         let currentIndex = getActualCursorIndex(from: currentRange)
+         
+         let start = currentIndex
+         let end = WordMotionLogic.getLineEndIndex(text: text, currentIndex: currentIndex)
+         
+         let length = max(0, end - start)
+         
+         if length > 0 {
+             let us = Array(text.utf16)
+             if start + length <= us.count {
+                 let sub = us[start..<(start + length)]
+                 let textToYank = String(utf16CodeUnits: Array(sub), count: sub.count)
+                 
+                 let pasteboard = NSPasteboard.general
+                 pasteboard.clearContents()
+                 pasteboard.setString(textToYank, forType: .string)
+             }
+         }
     }
     
     public func undo() { // u

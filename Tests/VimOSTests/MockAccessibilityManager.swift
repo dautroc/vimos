@@ -73,8 +73,8 @@ class MockAccessibilityManager: AccessibilityManagerProtocol {
         methodCalls.append("moveToLineEnd")
     }
     
-    func selectCurrentLineContent() -> Bool {
-        methodCalls.append("selectCurrentLineContent")
+    func selectCurrentLineContent(includeNewline: Bool) -> Bool {
+        methodCalls.append("selectCurrentLineContent(includeNewline: \(includeNewline))")
         return true // detailed simulation would go here
     }
     
@@ -121,6 +121,18 @@ class MockAccessibilityManager: AccessibilityManagerProtocol {
     
     func deleteCurrentCharacter() {
         methodCalls.append("deleteCurrentCharacter")
+    }
+    
+    func yank() {
+        methodCalls.append("yank")
+    }
+    
+    func yankCurrentLine(includeNewline: Bool) {
+        methodCalls.append("yankCurrentLine(includeNewline: \(includeNewline))")
+    }
+    
+    func yankRestOfLine() {
+        methodCalls.append("yankRestOfLine")
     }
     
     func undo() {

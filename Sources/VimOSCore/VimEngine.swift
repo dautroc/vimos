@@ -110,7 +110,7 @@ public class VimEngine: KeyboardHookDelegate {
                 
                 if pendingOperator == .change {
                     // 'cc' (Change Line)
-                    if accessibilityManager.selectCurrentLineContent() {
+                    if accessibilityManager.selectCurrentLineContent(includeNewline: false) {
                         accessibilityManager.deleteCurrentCharacter()
                     }
                     switchMode(to: .insert, collapseSelection: false)
@@ -152,8 +152,8 @@ public class VimEngine: KeyboardHookDelegate {
                 return true
             }
             
-            // Special handling for 'g' (5)
-            if keyCode == 5 {
+            // Double-key commands (g, y)
+            if keyCode == 5 { // g
                 if flags.contains(.maskShift) { // 'G'
                      executeMotion { self.accessibilityManager.moveToEndOfDocument() }
                      lastKeyCode = nil
@@ -167,6 +167,28 @@ public class VimEngine: KeyboardHookDelegate {
                         lastKeyCode = 5 // Buffer it
                         return true // Swallow first 'g'
                     }
+                }
+            } else if keyCode == 16 { // y
+                if mode == .visual {
+                    accessibilityManager.yank()
+                    switchMode(to: .normal)
+                    return true
+                }
+                if mode == .normal {
+                    if flags.contains(.maskShift) { // Y
+                        accessibilityManager.yankRestOfLine()
+                        switchMode(to: .normal)
+                        lastKeyCode = nil
+                        return true
+                    }
+                    if lastKeyCode == 16 { // yy
+                        accessibilityManager.yankCurrentLine(includeNewline: true)
+                        switchMode(to: .normal)
+                        lastKeyCode = nil
+                        return true
+                    }
+                    lastKeyCode = 16
+                    return true
                 }
             } else {
                 lastKeyCode = nil

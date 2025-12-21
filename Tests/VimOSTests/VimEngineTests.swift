@@ -185,7 +185,7 @@ class VimEngineTests {
         _ = simulateKey(8) // c
         _ = simulateKey(8) // c
         
-        assertTrue(mockAX.methodCalls.contains("selectCurrentLineContent"))
+        assertTrue(mockAX.methodCalls.contains("selectCurrentLineContent(includeNewline: false)"))
         assertTrue(mockAX.methodCalls.contains("deleteCurrentCharacter"))
         assertTrue(mockAX.methodCalls.contains("prepareForInsertMode(collapseSelection: false)"))
     }
@@ -203,6 +203,33 @@ class VimEngineTests {
         assertTrue(mockAX.methodCalls.contains("moveToLineEnd"))
         assertTrue(mockAX.methodCalls.contains("deleteCurrentCharacter"))
         assertTrue(mockAX.methodCalls.contains("prepareForInsertMode(collapseSelection: false)"))
+    }
+    
+    func testYankLine() {
+        setUp()
+        print("Running testYankLine...")
+        
+        _ = simulateKey(53) // ESC
+        
+        // yy
+        _ = simulateKey(16) // y
+        _ = simulateKey(16) // y
+        
+        assertTrue(mockAX.methodCalls.contains("yankCurrentLine(includeNewline: true)"))
+        // After yy, we stay in normal mode and clear pending operator
+        assertFalse(mockAX.methodCalls.contains("prepareForInsertMode")) 
+    }
+    
+    func testYankShift() {
+        setUp()
+        print("Running testYankShift...")
+        
+        _ = simulateKey(53) // ESC
+        
+        // Y (Shift + y)
+        _ = simulateKey(16, flags: .maskShift)
+        
+        assertTrue(mockAX.methodCalls.contains("yankRestOfLine"))
     }
     
     func testGlobalMotions() {
@@ -250,6 +277,8 @@ class VimEngineTests {
         testOperators()
         testChangeLine()
         testChangeRestOfLine()
+        testYankLine()
+        testYankShift()
         testGlobalMotions()
         testNewLineOps()
         
