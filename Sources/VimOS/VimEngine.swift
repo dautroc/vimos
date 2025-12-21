@@ -10,7 +10,13 @@ enum VimOperator {
     case change
 }
 
+protocol VimEngineUIDelegate: AnyObject, Sendable {
+    @MainActor func didSwitchMode(_ mode: VimMode)
+    @MainActor func didHideOverlay()
+}
+
 class VimEngine: KeyboardHookDelegate {
+    weak var uiDelegate: VimEngineUIDelegate?
     private var mode: VimMode = .insert
     private let accessibilityManager = AccessibilityManager()
     private var lastKeyCode: Int? // Simple buffer for 'gg'
@@ -24,8 +30,6 @@ class VimEngine: KeyboardHookDelegate {
     func handle(keyEvent: CGEvent) -> Bool {
         let flags = keyEvent.flags
         let keyCode = keyEvent.getIntegerValueField(.keyboardEventKeycode)
-        
-        // print("DEBUG: Key: \(keyCode), Mode: \(mode)")
         
         // Mode Switching Logic
         if keyCode == 53 { // ESC
@@ -62,7 +66,6 @@ class VimEngine: KeyboardHookDelegate {
             // Handle 't' Waiting State
             if isWaitingForTillChar {
                 if let event = NSEvent(cgEvent: keyEvent), let char = event.characters, !char.isEmpty {
-                     // Use 'executeMotion' to properly handle Pending Operator (like 'c')
                      executeMotion { self.accessibilityManager.moveToNextOccurrence(of: char, stopBefore: true) }
                 }
                 isWaitingForTillChar = false
@@ -72,8 +75,6 @@ class VimEngine: KeyboardHookDelegate {
             // Handle Inner Object Waiting State
             if isWaitingForTextObject {
                 if let event = NSEvent(cgEvent: keyEvent), let char = event.characters, !char.isEmpty {
-                    // This is a "Motion" that selects a range.
-                    // executeMotion will apply Pending Operator (delete and insert).
                     executeMotion { self.accessibilityManager.selectInnerObject(char: char) }
                 }
                 isWaitingForTextObject = false
@@ -92,8 +93,6 @@ class VimEngine: KeyboardHookDelegate {
             if mode == .normal && keyCode == 8 { // c
                 if pendingOperator == .change {
                     // 'cc' (Change Line)
-                    // Select content of line (excluding newline). 
-                    // If content exists, delete it. If empty line, just enter insert.
                     if accessibilityManager.selectCurrentLineContent() {
                         accessibilityManager.deleteCurrentCharacter()
                     }
@@ -213,6 +212,7 @@ class VimEngine: KeyboardHookDelegate {
                 }
                 if mode == .normal {
                     isWaitingForReplaceChar = true
+                    // Update UI implied? No need for indicator change.
                     return true
                 }
                 return true
@@ -237,7 +237,7 @@ class VimEngine: KeyboardHookDelegate {
             }
         }
         
-        return false // Passthrough in Insert Mode
+        return false 
     }
     
     private func executeMotion(_ motion: () -> Void) {
@@ -256,8 +256,10 @@ class VimEngine: KeyboardHookDelegate {
             }
             
             pendingOperator = nil
+            // No indicator update needed as switching mode handles it or we return to normal.
         } else {
             motion()
+            // No indicator update needed (static position).
         }
     }
 
@@ -271,7 +273,6 @@ class VimEngine: KeyboardHookDelegate {
         
         if mode == .normal {
             // Vim Behavior: When entering Normal mode, cursor moves one step left.
-            // Only if coming from Insert
             if previousMode == .insert {
                  accessibilityManager.moveCursor(.left)
             }
@@ -285,6 +286,20 @@ class VimEngine: KeyboardHookDelegate {
         } else {
             // Switching to Insert Mode
             accessibilityManager.prepareForInsertMode(collapseSelection: collapseSelection)
+        }
+        
+        // Update Indicator for new mode
+        let currentDelegate = uiDelegate
+        let currentMode = mode
+        DispatchQueue.main.async {
+            currentDelegate?.didSwitchMode(currentMode)
+        }
+    }
+    
+    func hideIndicator() {
+        let currentDelegate = uiDelegate
+        DispatchQueue.main.async {
+             currentDelegate?.didHideOverlay()
         }
     }
 }

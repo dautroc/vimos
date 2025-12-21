@@ -127,6 +127,60 @@ class AccessibilityManager {
         return nil
     }
     
+    func getCursorBounds() -> CGRect? {
+        guard let element = getFocusedElement() else { return nil }
+        guard let range = getSelectedRange() else { return nil }
+        
+        // Get the character under cursor (Block Cursor style)
+        let cursorIndex = getActualCursorIndex(from: range)
+        
+        // Handle end of document/line case delicately
+        // If we really want the "insertion point" bounds, requesting length 0 might work on some apps,
+        // but for Block Cursor visualization we usually want the character bounds.
+        // We'll try to get bounds of the character at `cursorIndex`.
+        
+        var length = 1
+        if let text = getText() {
+            if cursorIndex >= text.count {
+                // We are at the very end. 
+                // Fallback: Get bounds of the *previous* character and shift right? 
+                // Or just the previous character.
+                if text.count > 0 {
+                    let prevIndex = text.count - 1
+                    var prevRange = CFRange(location: prevIndex, length: 1)
+                     if let rect = getBoundsFor(range: prevRange, element: element) {
+                         // Shift it to the right approximately (width of char)
+                         // This is a heuristic.
+                         return CGRect(x: rect.origin.x + rect.width, y: rect.origin.y, width: rect.width, height: rect.height)
+                     }
+                }
+                return nil
+            }
+        }
+        
+        let targetRange = CFRange(location: cursorIndex, length: length)
+        return getBoundsFor(range: targetRange, element: element)
+    }
+    
+    private func getBoundsFor(range: CFRange, element: AXUIElement) -> CGRect? {
+        var rangeV = range
+        guard let axRange = AXValueCreate(.cfRange, &rangeV) else { return nil }
+        
+        var boundsValue: AnyObject?
+        let result = AXUIElementCopyParameterizedAttributeValue(element, "AXBoundsForRange" as CFString, axRange, &boundsValue)
+        
+        if result == .success, CFGetTypeID(boundsValue) == AXValueGetTypeID() {
+             let axBounds = boundsValue as! AXValue
+             if AXValueGetType(axBounds) == .cgRect {
+                 var rect = CGRect.zero
+                 if AXValueGetValue(axBounds, .cgRect, &rect) {
+                     return rect
+                 }
+             }
+        }
+        return nil
+    }
+    
     // MARK: - Word Operations
     
     // Helper to determine the "active" cursor end in Visual Mode
@@ -429,3 +483,5 @@ class AccessibilityManager {
         keyUp?.post(tap: .cghidEventTap)
     }
 }
+
+extension AccessibilityManager: @unchecked Sendable {}
