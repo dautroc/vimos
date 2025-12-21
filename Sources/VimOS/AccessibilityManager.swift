@@ -12,6 +12,8 @@ class AccessibilityManager {
     
     private var isBlockCursor = false
     private var visualAnchorIndex: Int? // Anchor point for Visual Mode
+    public private(set) var isVisualLineMode = false // For 'V' mode
+
     
     func setBlockCursor(_ enabled: Bool) {
         isBlockCursor = enabled
@@ -35,9 +37,11 @@ class AccessibilityManager {
             let activeIndex = getActualCursorIndex(from: currentRange)
             // Clear anchor first so setCursor behaves normally
             visualAnchorIndex = nil
+            isVisualLineMode = false
             setCursor(at: activeIndex)
         } else {
             visualAnchorIndex = nil
+            isVisualLineMode = false
         }
     }
     
@@ -48,6 +52,7 @@ class AccessibilityManager {
         // as it reliably collapses any selection (Visual or Block) to its start index.
         
         visualAnchorIndex = nil
+        isVisualLineMode = false
         isBlockCursor = false
         
         if collapseSelection {
@@ -61,26 +66,45 @@ class AccessibilityManager {
     // Helper to set cursor respecting block mode and visual mode
     private func setCursor(at index: Int) {
         if let anchor = visualAnchorIndex {
-            // Visual Mode: Select from anchor to index
-            let start = min(anchor, index)
-            let end = max(anchor, index)
-            // Range length is difference + 1 to include the character under cursor (standard visual)
-            // But AX ranges are typically [start, length).
-            // If anchor=0, index=2. Text: "ABC". We want "ABC" selected? Or "AB"?
-            // Vim visual: if I am at A, press v, move to C. Selection covers A,B,C.
-            // Length = abs(anchor - index) + 1
-            
-            // However, we must be careful with bounds.
-            var length = (end - start) + 1
-            
-            // Check text bounds to avoid overflow
-             if let text = getText() {
-                if start + length > text.count {
-                     length = text.count - start
+            if isVisualLineMode {
+                // Visual Line Mode: Select full lines from anchor to index
+                guard let text = getText() else { return }
+                
+                // Determine range of lines
+                let idx1 = min(anchor, index)
+                let idx2 = max(anchor, index)
+                
+                // Start is LineStart of idx1
+                let start = WordMotionLogic.getLineStartIndex(text: text, currentIndex: idx1)
+                
+                // End is LineEnd of idx2
+                let end = WordMotionLogic.getLineEndIndex(text: text, currentIndex: idx2)
+                
+                // Selection logic (matches previous verify): Exclude trailing newline for display but handle empty lines
+                // If the line is empty (start == end), we select the newline character itself so it's visible.
+                var length = end - start
+                
+                 if length == 0 && start < text.count {
+                     length = 1
+                 }
+                
+                setSelectedRange(CFRange(location: start, length: length))
+                
+            } else {
+                // Visual Character Mode: Select from anchor to index
+                let start = min(anchor, index)
+                let end = max(anchor, index)
+                
+                var length = (end - start) + 1
+                
+                if let text = getText() {
+                   if start + length > text.count {
+                        length = text.count - start
+                   }
                 }
-             }
-             
-            setSelectedRange(CFRange(location: start, length: length))
+                
+               setSelectedRange(CFRange(location: start, length: length))
+            }
             
         } else {
             // Normal/Insert Mode
@@ -342,7 +366,92 @@ class AccessibilityManager {
         }
     }
     
+    // MARK: - Visual Line Mode
+    
+    func enterVisualLineMode() {
+        guard let text = getText(), let currentRange = getSelectedRange() else { return }
+        let currentIndex = getActualCursorIndex(from: currentRange)
+        
+        let start = WordMotionLogic.getLineStartIndex(text: text, currentIndex: currentIndex)
+        let end = WordMotionLogic.getLineEndIndex(text: text, currentIndex: currentIndex) // Index of newline or count
+        
+        // Select full line CONTENT (excluding newline) to match user expectation of cursor position.
+        // [start, end) where end is newline index.
+        
+        let length = end - start
+        
+        visualAnchorIndex = start
+        isVisualLineMode = true
+        isBlockCursor = true
+        
+        setSelectedRange(CFRange(location: start, length: length))
+    }
+    
+
+    // MARK: - New Motions (A, o, O)
+    
+    func moveToLineRealEnd() {
+        // Disable block cursor for 'A' and 'o' to ensure we have a caret at the end, not a selection of the last char/newline
+        isBlockCursor = false
+        
+        if let text = getText(), let currentRange = getSelectedRange() {
+             let currentIndex = getActualCursorIndex(from: currentRange)
+             let newIndex = WordMotionLogic.getLineEndIndex(text: text, currentIndex: currentIndex)
+             // Move to newline (or end). This effectively is after the last character.
+             // Force setCursor even if index is same, to ensure block cursor is cleared if needed?
+             // But setCursor will use isBlockCursor=false.
+             setCursor(at: newIndex)
+        }
+    }
+    
+    func openNewLineBelow() {
+        // 'o'
+        isBlockCursor = false
+        // Move to end of line
+        moveToLineRealEnd()
+        // Simulate Return with Shift to avoid submitting forms (Soft Return)
+        simulateKeyPress(keyCode: 36, flags: .maskShift)
+    }
+    
+    func openNewLineAbove() {
+        // 'O'
+        isBlockCursor = false
+        // Move to start of line
+        moveToLineStart()
+        // Simulate Return with Shift (Soft Return)
+        simulateKeyPress(keyCode: 36, flags: .maskShift)
+        // Move Left to get to the newly created empty line above
+        // Return at start of line: Pushes content down. Cursor at Start of Content.
+        // Left goes to the empty line created before it.
+        moveCursor(.left)
+    }
+    
     // MARK: - Edit Operations
+    
+    func deleteVisualLine() {
+        // For 'd' in Visual Line mode: We want to delete the whole line INCLUDING newline.
+        // The current selection (visual) excludes newline for display purposes.
+        // We must extend it.
+        
+        guard let text = getText(), let currentRange = getSelectedRange() else {
+             simulateKeyPress(keyCode: 117)
+             return
+        }
+        
+        // Check if we need to expand
+        // If selection ends at the newline index, we should include +1
+        // Actually, we can just calculate from range.
+        
+        let end = currentRange.location + currentRange.length
+        
+        // If end < text.count, it means there is more text (likely a newline at 'end')
+        if end < text.count {
+            // Extend selection by 1 to swallow the newline
+            setSelectedRange(CFRange(location: currentRange.location, length: currentRange.length + 1))
+        }
+        
+        simulateKeyPress(keyCode: 117)
+    }
     
     func deleteCurrentCharacter() { // x
         // Try AX Selection Delete first?
@@ -433,6 +542,8 @@ class AccessibilityManager {
     func moveCursor(_ direction: Direction) {
         // Try AX for Left/Right to preserve block cursor
         // AND ensure we calculate from the *active* cursor end in Visual Mode
+        
+        // Standard Left/Right using AX
         if direction == .left || direction == .right {
             if let text = getText(), let range = getSelectedRange() {
                  var newIndex = getActualCursorIndex(from: range)
@@ -444,6 +555,19 @@ class AccessibilityManager {
                  setCursor(at: newIndex)
                  return
             }
+        }
+        
+        // Standard Up/Down using AX (Vertical Motion Logic)
+        if direction == .up || direction == .down {
+             if let text = getText(), let range = getSelectedRange() {
+                 let activeIndex = getActualCursorIndex(from: range)
+                 let vDir: WordMotionLogic.VerticalDirection = (direction == .up) ? .up : .down
+                 
+                 let newIndex = WordMotionLogic.getVerticalIndex(text: text, currentIndex: activeIndex, direction: vDir)
+                 
+                 setCursor(at: newIndex)
+                 return
+             }
         }
         
         // Fallback: Simulate Arrow Keys

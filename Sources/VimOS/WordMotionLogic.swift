@@ -4,6 +4,48 @@ class WordMotionLogic {
     
     // MARK: - Core Motions
     
+    enum VerticalDirection {
+        case up
+        case down
+    }
+    
+    static func getVerticalIndex(text: String, currentIndex: Int, direction: VerticalDirection) -> Int {
+        let us = Array(text.utf16)
+        if currentIndex >= us.count && currentIndex != 0 { return currentIndex } // Bounds check (allow 0 for empty)
+         
+        // 1. Calculate current column
+        let lineStart = getLineStartIndex(text: text, currentIndex: currentIndex)
+        let col = currentIndex - lineStart
+        
+        let targetLineStart: Int
+        
+        if direction == .up {
+            // Find prev line
+            if lineStart == 0 { return 0 } // Already at top
+            let prevLineEnd = lineStart - 1
+            // Empty line check
+             if prevLineEnd < 0 { return 0 }
+            
+            targetLineStart = getLineStartIndex(text: text, currentIndex: prevLineEnd)
+        } else {
+            // Find next line
+            let lineEnd = getLineEndIndex(text: text, currentIndex: currentIndex)
+            if lineEnd >= us.count { return us.count } // End of doc
+            targetLineStart = lineEnd + 1
+        }
+        
+        if targetLineStart > us.count { return us.count }
+        
+        // 2. Find target line length
+        let targetLineEnd = getLineEndIndex(text: text, currentIndex: targetLineStart)
+        let targetLength = targetLineEnd - targetLineStart
+        
+        // 3. Apply column (clamped)
+        let newCol = min(col, targetLength)
+        
+        return targetLineStart + newCol
+    }
+    
     static func getNextWordIndex(text: String, currentIndex: Int) -> Int {
         let us = Array(text.utf16)
         guard currentIndex < us.count else { return currentIndex }

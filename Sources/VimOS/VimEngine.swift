@@ -28,6 +28,11 @@ class VimEngine: KeyboardHookDelegate {
     private var isWaitingForTextObject = false // State for 'i' (inner) modifier
 
     func handle(keyEvent: CGEvent) -> Bool {
+        // Pass through events simulated by AccessibilityManager (Magic Number 0x555)
+        if keyEvent.getIntegerValueField(.eventSourceUserData) == 0x555 {
+            return false
+        }
+
         let flags = keyEvent.flags
         let keyCode = keyEvent.getIntegerValueField(.keyboardEventKeycode)
         
@@ -115,13 +120,23 @@ class VimEngine: KeyboardHookDelegate {
                 return true
             }
             
-            // 'v' to toggle Visual Mode
-            if keyCode == 9 {
-                if mode == .visual {
-                    switchMode(to: .normal)
-                } else {
-                    switchMode(to: .visual)
-                }
+            // 'v' to toggle Visual / Visual Line
+            if keyCode == 9 { // v
+                 if flags.contains(.maskShift) { // V (Visual Line)
+                     // If we are already in visual, we just switch behavior (AccessibilityManager handles re-entrance check/update)
+                     if mode != .visual {
+                         switchMode(to: .visual) 
+                     }
+                     // Call enterVisualLineMode AFTER switching to visual, 
+                     // because switchMode calls enterVisualMode which might reset selection logic.
+                     accessibilityManager.enterVisualLineMode()
+                 } else { // v (Visual Character)
+                     if mode == .visual {
+                         switchMode(to: .normal)
+                     } else {
+                         switchMode(to: .visual)
+                     }
+                 }
                 return true
             }
             
@@ -188,10 +203,40 @@ class VimEngine: KeyboardHookDelegate {
                     return true
                 }
             
+            // 7. Insert Motions (a, A, o, O)
+            
+            case 0: // a
+                if mode == .normal {
+                    if flags.contains(.maskShift) { // A
+                        accessibilityManager.moveToLineRealEnd()
+                        switchMode(to: .insert, collapseSelection: false)
+                    } else { // a
+                        accessibilityManager.moveCursor(.right)
+                        switchMode(to: .insert)
+                    }
+                    return true
+                }
+                
+            case 31: // o
+                if mode == .normal {
+                    if flags.contains(.maskShift) { // O
+                        accessibilityManager.openNewLineAbove()
+                        switchMode(to: .insert, collapseSelection: false)
+                    } else { // o
+                        accessibilityManager.openNewLineBelow()
+                        switchMode(to: .insert, collapseSelection: false)
+                    }
+                    return true
+                }
+            
             // Edit Commands
             case 7: // x
                 if mode == .visual {
-                     accessibilityManager.deleteCurrentCharacter()
+                     if accessibilityManager.isVisualLineMode {
+                         accessibilityManager.deleteVisualLine()
+                     } else {
+                         accessibilityManager.deleteCurrentCharacter()
+                     }
                      switchMode(to: .normal)
                 } else {
                     accessibilityManager.deleteCurrentCharacter()
@@ -223,7 +268,11 @@ class VimEngine: KeyboardHookDelegate {
                 
             case 2: // d (Delete)
                  if mode == .visual {
-                     accessibilityManager.deleteCurrentCharacter()
+                     if accessibilityManager.isVisualLineMode {
+                         accessibilityManager.deleteVisualLine()
+                     } else {
+                         accessibilityManager.deleteCurrentCharacter()
+                     }
                      switchMode(to: .normal)
                      return true
                  }
@@ -237,7 +286,7 @@ class VimEngine: KeyboardHookDelegate {
             }
         }
         
-        return false 
+        return false  
     }
     
     private func executeMotion(_ motion: () -> Void) {
@@ -273,6 +322,7 @@ class VimEngine: KeyboardHookDelegate {
         
         if mode == .normal {
             // Vim Behavior: When entering Normal mode, cursor moves one step left.
+            // But only if we were in insert?
             if previousMode == .insert {
                  accessibilityManager.moveCursor(.left)
             }
