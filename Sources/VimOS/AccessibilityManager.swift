@@ -266,6 +266,15 @@ class AccessibilityManager {
         simulateKeyPress(keyCode: 117)
     }
     
+    func undo() { // u
+        // Cmd+Z
+        simulateKeyPress(keyCode: 6, flags: .maskCommand)
+    }
+    
+    func redo() { // Ctrl-r (Vim) -> Cmd+Shift+Z (macOS Standard)
+        simulateKeyPress(keyCode: 6, flags: [.maskCommand, .maskShift])
+    }
+    
     func replaceCurrentCharacter(with charCode: CGKeyCode, flags: CGEventFlags) { // r + char
         // Attempt AX replacement first (Cleanest)
         // 1. Convert charCode to string? (Hard without mapping, so let's skip pure AX text injection for now unless we have the char)

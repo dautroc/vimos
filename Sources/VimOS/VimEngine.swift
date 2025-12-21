@@ -169,7 +169,18 @@ class VimEngine: KeyboardHookDelegate {
                 }
                 return true
                 
-            case 15: // r (Replace)
+            case 32: // u (Undo)
+                if mode == .normal {
+                    accessibilityManager.undo()
+                    return true
+                }
+                
+            case 15: // r (Replace) or Ctrl-r (Redo)
+                if flags.contains(.maskControl) {
+                    // Ctrl-r Redo
+                    accessibilityManager.redo()
+                    return true
+                }
                 if mode == .normal {
                     isWaitingForReplaceChar = true
                     return true
