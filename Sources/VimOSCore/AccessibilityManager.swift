@@ -1,21 +1,61 @@
 import Cocoa
 import ApplicationServices
 
-enum Direction {
+public enum Direction: Sendable {
     case left
     case right
     case up
     case down
 }
 
-class AccessibilityManager {
+
+public protocol AccessibilityManagerProtocol: AnyObject {
+    var isVisualLineMode: Bool { get }
+    
+    func setBlockCursor(_ enabled: Bool)
+    func enterVisualMode()
+    func exitVisualMode()
+    func prepareForInsertMode(collapseSelection: Bool)
+    
+    func moveWordForward()
+    func moveWordBackward()
+    func moveToEndOfWord()
+    func moveToLineStart()
+    func moveToLineEnd()
+    func selectCurrentLineContent() -> Bool
+    func moveToLineStartNonWhitespace()
+    
+    func moveToStartOfDocument()
+    func moveToEndOfDocument()
+    
+    func moveToNextOccurrence(of char: String, stopBefore: Bool)
+    func selectInnerObject(char: String)
+    
+    func enterVisualLineMode()
+    
+    func moveToLineRealEnd()
+    func openNewLineBelow()
+    func openNewLineAbove()
+    
+    func deleteVisualLine()
+    func deleteCurrentCharacter()
+    func undo()
+    func redo()
+    func replaceCurrentCharacter(with charCode: CGKeyCode, flags: CGEventFlags)
+    
+    func moveCursor(_ direction: Direction)
+}
+
+public class AccessibilityManager: AccessibilityManagerProtocol {
+
     
     private var isBlockCursor = false
     private var visualAnchorIndex: Int? // Anchor point for Visual Mode
     public private(set) var isVisualLineMode = false // For 'V' mode
 
+    public init() {}
     
-    func setBlockCursor(_ enabled: Bool) {
+    public func setBlockCursor(_ enabled: Bool) {
         isBlockCursor = enabled
         // Refresh current cursor if possible
         if let currentRange = getSelectedRange() {
@@ -25,13 +65,13 @@ class AccessibilityManager {
     
     // MARK: - Visual Mode
     
-    func enterVisualMode() {
+    public func enterVisualMode() {
         if let currentRange = getSelectedRange() {
             visualAnchorIndex = currentRange.location
         }
     }
     
-    func exitVisualMode() {
+    public func exitVisualMode() {
         // Collapse selection to cursor
         if let currentRange = getSelectedRange() {
             let activeIndex = getActualCursorIndex(from: currentRange)
@@ -45,7 +85,7 @@ class AccessibilityManager {
         }
     }
     
-    func prepareForInsertMode(collapseSelection: Bool = true) {
+    public func prepareForInsertMode(collapseSelection: Bool = true) {
         // Atomic transition to Insert Mode.
         // We want to collapse the selection to the start (standard Vim 'i' behavior).
         // Simulating the Left Arrow is the most robust way to do this in macOS apps
@@ -224,7 +264,7 @@ class AccessibilityManager {
         return range.location
     }
     
-    func moveWordForward() {
+    public func moveWordForward() {
         if let text = getText(), let currentRange = getSelectedRange() {
             let currentIndex = getActualCursorIndex(from: currentRange)
             let newIndex = WordMotionLogic.getNextWordIndex(text: text, currentIndex: currentIndex)
@@ -238,7 +278,7 @@ class AccessibilityManager {
         simulateKeyPress(keyCode: 124, flags: .maskAlternate)
     }
     
-    func moveWordBackward() {
+    public func moveWordBackward() {
         if let text = getText(), let currentRange = getSelectedRange() {
              let currentIndex = getActualCursorIndex(from: currentRange)
              let newIndex = WordMotionLogic.getPrevWordIndex(text: text, currentIndex: currentIndex)
@@ -252,7 +292,7 @@ class AccessibilityManager {
         simulateKeyPress(keyCode: 123, flags: .maskAlternate)
     }
     
-    func moveToEndOfWord() {
+    public func moveToEndOfWord() {
         if let text = getText(), let currentRange = getSelectedRange() {
             let currentIndex = getActualCursorIndex(from: currentRange)
             let newIndex = WordMotionLogic.getEndOfWordIndex(text: text, currentIndex: currentIndex)
@@ -266,7 +306,7 @@ class AccessibilityManager {
     
     // MARK: - Line Operations
     
-    func moveToLineStart() { // 0
+    public func moveToLineStart() { // 0
         if let text = getText(), let currentRange = getSelectedRange() {
              let currentIndex = getActualCursorIndex(from: currentRange)
              let newIndex = WordMotionLogic.getLineStartIndex(text: text, currentIndex: currentIndex)
@@ -279,7 +319,7 @@ class AccessibilityManager {
         simulateKeyPress(keyCode: 123, flags: .maskCommand)
     }
     
-    func moveToLineEnd() { // $
+    public func moveToLineEnd() { // $
         if let text = getText(), let currentRange = getSelectedRange() {
              let currentIndex = getActualCursorIndex(from: currentRange)
              // Use Visual Line End (Last character) instead of Newline index
@@ -295,7 +335,7 @@ class AccessibilityManager {
     
     /// Selects the content of the current line (excluding newline).
     /// Returns true if content was selected (length > 0), false if line is empty (length 0).
-    func selectCurrentLineContent() -> Bool {
+    public func selectCurrentLineContent() -> Bool {
         guard let text = getText(), let currentRange = getSelectedRange() else { return false }
         let currentIndex = getActualCursorIndex(from: currentRange)
         
@@ -312,7 +352,7 @@ class AccessibilityManager {
         return false
     }
     
-    func moveToLineStartNonWhitespace() { // ^
+    public func moveToLineStartNonWhitespace() { // ^
         if let text = getText(), let currentRange = getSelectedRange() {
              let currentIndex = getActualCursorIndex(from: currentRange)
              let newIndex = WordMotionLogic.getLineFirstNonWhitespaceIndex(text: text, currentIndex: currentIndex)
@@ -327,20 +367,20 @@ class AccessibilityManager {
     
     // MARK: - Document Motions
     
-    func moveToStartOfDocument() { // gg
+    public func moveToStartOfDocument() { // gg
         // Using AX for whole document is excessive/hard (getting full text range).
         // Standard macOS is Cmd+Up Arrow.
         simulateKeyPress(keyCode: 126, flags: .maskCommand)
     }
     
-    func moveToEndOfDocument() { // G
+    public func moveToEndOfDocument() { // G
         // Standard macOS is Cmd+Down Arrow.
         simulateKeyPress(keyCode: 125, flags: .maskCommand)
     }
     
     // MARK: - Character Search Motions
     
-    func moveToNextOccurrence(of char: String, stopBefore: Bool) {
+    public func moveToNextOccurrence(of char: String, stopBefore: Bool) {
         if let text = getText(), let currentRange = getSelectedRange() {
             let currentIndex = getActualCursorIndex(from: currentRange)
             let newIndex = WordMotionLogic.getNextOccurrenceIndex(text: text, currentIndex: currentIndex, targetChar: char, stopBefore: stopBefore)
@@ -351,7 +391,7 @@ class AccessibilityManager {
         }
     }
     
-    func selectInnerObject(char: String) {
+    public func selectInnerObject(char: String) {
         if let text = getText(), let currentRange = getSelectedRange() {
             let currentIndex = getActualCursorIndex(from: currentRange)
             
@@ -368,7 +408,7 @@ class AccessibilityManager {
     
     // MARK: - Visual Line Mode
     
-    func enterVisualLineMode() {
+    public func enterVisualLineMode() {
         guard let text = getText(), let currentRange = getSelectedRange() else { return }
         let currentIndex = getActualCursorIndex(from: currentRange)
         
@@ -390,7 +430,7 @@ class AccessibilityManager {
 
     // MARK: - New Motions (A, o, O)
     
-    func moveToLineRealEnd() {
+    public func moveToLineRealEnd() {
         // Disable block cursor for 'A' and 'o' to ensure we have a caret at the end, not a selection of the last char/newline
         isBlockCursor = false
         
@@ -404,7 +444,7 @@ class AccessibilityManager {
         }
     }
     
-    func openNewLineBelow() {
+    public func openNewLineBelow() {
         // 'o'
         isBlockCursor = false
         // Move to end of line
@@ -413,7 +453,7 @@ class AccessibilityManager {
         simulateKeyPress(keyCode: 36, flags: .maskShift)
     }
     
-    func openNewLineAbove() {
+    public func openNewLineAbove() {
         // 'O'
         isBlockCursor = false
         // Move to start of line
@@ -428,7 +468,7 @@ class AccessibilityManager {
     
     // MARK: - Edit Operations
     
-    func deleteVisualLine() {
+    public func deleteVisualLine() {
         // For 'd' in Visual Line mode: We want to delete the whole line INCLUDING newline.
         // The current selection (visual) excludes newline for display purposes.
         // We must extend it.
@@ -453,23 +493,23 @@ class AccessibilityManager {
         simulateKeyPress(keyCode: 117)
     }
     
-    func deleteCurrentCharacter() { // x
+    public func deleteCurrentCharacter() { // x
         // Try AX Selection Delete first?
         // Actually, simulating Forward Delete (117) is usually safe if we are not at EOL.
         // But to be robust against "Char Before" issues (Backspace), we stick to 117.
         simulateKeyPress(keyCode: 117)
     }
     
-    func undo() { // u
+    public func undo() { // u
         // Cmd+Z
         simulateKeyPress(keyCode: 6, flags: .maskCommand)
     }
     
-    func redo() { // Ctrl-r (Vim) -> Cmd+Shift+Z (macOS Standard)
+    public func redo() { // Ctrl-r (Vim) -> Cmd+Shift+Z (macOS Standard)
         simulateKeyPress(keyCode: 6, flags: [.maskCommand, .maskShift])
     }
     
-    func replaceCurrentCharacter(with charCode: CGKeyCode, flags: CGEventFlags) { // r + char
+    public func replaceCurrentCharacter(with charCode: CGKeyCode, flags: CGEventFlags) { // r + char
         // Attempt AX replacement first (Cleanest)
         // 1. Convert charCode to string? (Hard without mapping, so let's skip pure AX text injection for now unless we have the char)
         // Since we only have keycode, we depend on simulation for input.
@@ -539,7 +579,7 @@ class AccessibilityManager {
     
     // MARK: - Movement simulation (Fallback)
     
-    func moveCursor(_ direction: Direction) {
+    public func moveCursor(_ direction: Direction) {
         // Try AX for Left/Right to preserve block cursor
         // AND ensure we calculate from the *active* cursor end in Visual Mode
         

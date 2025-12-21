@@ -5,11 +5,24 @@ import PackageDescription
 
 let package = Package(
     name: "VimOS",
+    platforms: [
+        .macOS(.v10_13)
+    ],
     targets: [
-        // Targets are the basic building blocks of a package, defining a module or a test suite.
-        // Targets can depend on other targets in this package and products from dependencies.
+        // Core Logic Library
+        .target(
+            name: "VimOSCore"
+        ),
+        // Main Application Executable
         .executableTarget(
-            name: "VimOS"
+            name: "VimOS",
+            dependencies: ["VimOSCore"]
+        ),
+        // Custom Test Runner Executable
+        .executableTarget(
+            name: "VimOSTestRunner",
+            dependencies: ["VimOSCore"],
+            path: "Tests/VimOSTests" 
         ),
     ]
 )

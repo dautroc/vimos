@@ -1,24 +1,25 @@
 import Cocoa
 
-enum VimMode {
+public enum VimMode: Sendable {
     case normal
     case insert
     case visual
 }
 
-enum VimOperator {
+public enum VimOperator: Sendable {
     case change
 }
 
-protocol VimEngineUIDelegate: AnyObject, Sendable {
+public protocol VimEngineUIDelegate: AnyObject, Sendable {
     @MainActor func didSwitchMode(_ mode: VimMode)
     @MainActor func didHideOverlay()
 }
 
-class VimEngine: KeyboardHookDelegate {
-    weak var uiDelegate: VimEngineUIDelegate?
+public class VimEngine: KeyboardHookDelegate {
+    public weak var uiDelegate: VimEngineUIDelegate?
     private var mode: VimMode = .insert
-    private let accessibilityManager = AccessibilityManager()
+    private let accessibilityManager: AccessibilityManagerProtocol
+    private var lastMode: VimMode = .insert // To track previous mode efficiently
     private var lastKeyCode: Int? // Simple buffer for 'gg'
     private var isWaitingForReplaceChar = false // For 'r' generic command
     
@@ -26,8 +27,12 @@ class VimEngine: KeyboardHookDelegate {
     private var pendingOperator: VimOperator? = nil
     private var isWaitingForTillChar = false // State for 't' command
     private var isWaitingForTextObject = false // State for 'i' (inner) modifier
+    
+    public init(accessibilityManager: AccessibilityManagerProtocol = AccessibilityManager()) {
+        self.accessibilityManager = accessibilityManager
+    }
 
-    func handle(keyEvent: CGEvent) -> Bool {
+    public func handle(keyEvent: CGEvent) -> Bool {
         // Pass through events simulated by AccessibilityManager (Magic Number 0x555)
         if keyEvent.getIntegerValueField(.eventSourceUserData) == 0x555 {
             return false

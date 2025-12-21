@@ -1,11 +1,11 @@
 import Cocoa
 
 @MainActor
-class ModeIndicator {
+public class ModeIndicator {
     private var window: NSWindow!
     private var textField: NSTextField!
     
-    init() {
+    public init() {
         setupWindow()
     }
     
@@ -39,7 +39,7 @@ class ModeIndicator {
         window.contentView?.addSubview(textField)
     }
     
-    func show(mode: VimMode) {
+    public func show(mode: VimMode) {
         let (text, color) = getModeConfig(mode)
         
         textField.stringValue = text
@@ -52,7 +52,7 @@ class ModeIndicator {
         window.orderFront(nil)
     }
     
-    func hide() {
+    public func hide() {
         window.orderOut(nil)
     }
     

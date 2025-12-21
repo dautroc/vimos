@@ -1,26 +1,26 @@
 import Cocoa
 import CoreGraphics
 
-protocol KeyboardHookDelegate: AnyObject {
+public protocol KeyboardHookDelegate: AnyObject {
     func handle(keyEvent: CGEvent) -> Bool // Returns true if key should be suppressed
 }
 
-class KeyboardHook {
-    weak var delegate: KeyboardHookDelegate?
+public class KeyboardHook {
+    public weak var delegate: KeyboardHookDelegate?
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
     private var isHookActive = false
 
-    var onToggleRequest: (() -> Void)?
+    public var onToggleRequest: (() -> Void)?
 
-    init() {}
+    public init() {}
 
-    func start() {
+    public func start() {
         isHookActive = true
         ensureTapEnabled()
     }
 
-    func stop() {
+    public func stop() {
         isHookActive = false
         // Do NOT disable the tap, so we can still listen for toggle shortcut
         // ensureTapEnabled() // Make sure it's running

@@ -1,0 +1,547 @@
+[0/1] Planning build
+Building for debugging...
+[0/5] Write sources
+[1/5] Write swift-version--1AB21518FC5DEDBE.txt
+[3/9] Compiling VimOSCore ModeIndicator.swift
+/Users/loi/workspace/vimos/Sources/VimOSCore/ModeIndicator.swift:5:14: error: declaration can not have multiple global actor attributes ('MainActor' and 'MainActor')
+ 3 | @MainActor
+ 4 | @MainActor
+ 5 | public class ModeIndicator {
+   |              `- error: declaration can not have multiple global actor attributes ('MainActor' and 'MainActor')
+ 6 |     private var window: NSWindow!
+ 7 |     private var textField: NSTextField!
+[4/9] Compiling VimOSCore AppDelegate.swift
+/Users/loi/workspace/vimos/Sources/VimOSCore/AppDelegate.swift:5:14: error: declaration can not have multiple global actor attributes ('MainActor' and 'MainActor')
+ 3 | @MainActor
+ 4 | @MainActor
+ 5 | public class AppDelegate: NSObject, NSApplicationDelegate, VimEngineUIDelegate {
+   |              `- error: declaration can not have multiple global actor attributes ('MainActor' and 'MainActor')
+ 6 |     var statusItem: NSStatusItem!
+ 7 |     var hook: KeyboardHook?
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/AppDelegate.swift:89:10: error: method 'didSwitchMode' must be declared public because it matches a requirement in public protocol 'VimEngineUIDelegate'
+87 |     // MARK: - VimEngineUIDelegate
+88 |     
+89 |     func didSwitchMode(_ mode: VimMode) {
+   |          |- error: method 'didSwitchMode' must be declared public because it matches a requirement in public protocol 'VimEngineUIDelegate'
+   |          `- note: mark the instance method as 'public' to satisfy the requirement
+90 |         modeIndicator?.show(mode: mode)
+91 |     }
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/AppDelegate.swift:93:10: error: method 'didHideOverlay()' must be declared public because it matches a requirement in public protocol 'VimEngineUIDelegate'
+91 |     }
+92 |     
+93 |     func didHideOverlay() {
+   |          |- error: method 'didHideOverlay()' must be declared public because it matches a requirement in public protocol 'VimEngineUIDelegate'
+   |          `- note: mark the instance method as 'public' to satisfy the requirement
+94 |         modeIndicator?.hide()
+95 |     }
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/ModeIndicator.swift:5:14: error: declaration can not have multiple global actor attributes ('MainActor' and 'MainActor')
+ 3 | @MainActor
+ 4 | @MainActor
+ 5 | public class ModeIndicator {
+   |              `- error: declaration can not have multiple global actor attributes ('MainActor' and 'MainActor')
+ 6 |     private var window: NSWindow!
+ 7 |     private var textField: NSTextField!
+error: emit-module command failed with exit code 1 (use -v to see invocation)
+[5/9] Emitting module VimOSCore
+/Users/loi/workspace/vimos/Sources/VimOSCore/AccessibilityManager.swift:58:10: error: method 'setBlockCursor' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+ 56 |     public init() {}
+ 57 |     
+ 58 |     func setBlockCursor(_ enabled: Bool) {
+    |          |- error: method 'setBlockCursor' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+    |          `- note: mark the instance method as 'public' to satisfy the requirement
+ 59 |         isBlockCursor = enabled
+ 60 |         // Refresh current cursor if possible
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/AccessibilityManager.swift:68:10: error: method 'enterVisualMode()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+ 66 |     // MARK: - Visual Mode
+ 67 |     
+ 68 |     func enterVisualMode() {
+    |          |- error: method 'enterVisualMode()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+    |          `- note: mark the instance method as 'public' to satisfy the requirement
+ 69 |         if let currentRange = getSelectedRange() {
+ 70 |             visualAnchorIndex = currentRange.location
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/AccessibilityManager.swift:74:10: error: method 'exitVisualMode()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+ 72 |     }
+ 73 |     
+ 74 |     func exitVisualMode() {
+    |          |- error: method 'exitVisualMode()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+    |          `- note: mark the instance method as 'public' to satisfy the requirement
+ 75 |         // Collapse selection to cursor
+ 76 |         if let currentRange = getSelectedRange() {
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/AccessibilityManager.swift:88:10: error: method 'prepareForInsertMode(collapseSelection:)' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+ 86 |     }
+ 87 |     
+ 88 |     func prepareForInsertMode(collapseSelection: Bool = true) {
+    |          |- error: method 'prepareForInsertMode(collapseSelection:)' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+    |          `- note: mark the instance method as 'public' to satisfy the requirement
+ 89 |         // Atomic transition to Insert Mode.
+ 90 |         // We want to collapse the selection to the start (standard Vim 'i' behavior).
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/AccessibilityManager.swift:267:10: error: method 'moveWordForward()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+265 |     }
+266 |     
+267 |     func moveWordForward() {
+    |          |- error: method 'moveWordForward()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+    |          `- note: mark the instance method as 'public' to satisfy the requirement
+268 |         if let text = getText(), let currentRange = getSelectedRange() {
+269 |             let currentIndex = getActualCursorIndex(from: currentRange)
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/AccessibilityManager.swift:281:10: error: method 'moveWordBackward()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+279 |     }
+280 |     
+281 |     func moveWordBackward() {
+    |          |- error: method 'moveWordBackward()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+    |          `- note: mark the instance method as 'public' to satisfy the requirement
+282 |         if let text = getText(), let currentRange = getSelectedRange() {
+283 |              let currentIndex = getActualCursorIndex(from: currentRange)
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/AccessibilityManager.swift:295:10: error: method 'moveToEndOfWord()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+293 |     }
+294 |     
+295 |     func moveToEndOfWord() {
+    |          |- error: method 'moveToEndOfWord()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+    |          `- note: mark the instance method as 'public' to satisfy the requirement
+296 |         if let text = getText(), let currentRange = getSelectedRange() {
+297 |             let currentIndex = getActualCursorIndex(from: currentRange)
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/AccessibilityManager.swift:309:10: error: method 'moveToLineStart()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+307 |     // MARK: - Line Operations
+308 |     
+309 |     func moveToLineStart() { // 0
+    |          |- error: method 'moveToLineStart()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+    |          `- note: mark the instance method as 'public' to satisfy the requirement
+310 |         if let text = getText(), let currentRange = getSelectedRange() {
+311 |              let currentIndex = getActualCursorIndex(from: currentRange)
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/AccessibilityManager.swift:322:10: error: method 'moveToLineEnd()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+320 |     }
+321 |     
+322 |     func moveToLineEnd() { // $
+    |          |- error: method 'moveToLineEnd()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+    |          `- note: mark the instance method as 'public' to satisfy the requirement
+323 |         if let text = getText(), let currentRange = getSelectedRange() {
+324 |              let currentIndex = getActualCursorIndex(from: currentRange)
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/AccessibilityManager.swift:338:10: error: method 'selectCurrentLineContent()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+336 |     /// Selects the content of the current line (excluding newline).
+337 |     /// Returns true if content was selected (length > 0), false if line is empty (length 0).
+338 |     func selectCurrentLineContent() -> Bool {
+    |          |- error: method 'selectCurrentLineContent()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+    |          `- note: mark the instance method as 'public' to satisfy the requirement
+339 |         guard let text = getText(), let currentRange = getSelectedRange() else { return false }
+340 |         let currentIndex = getActualCursorIndex(from: currentRange)
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/AccessibilityManager.swift:355:10: error: method 'moveToLineStartNonWhitespace()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+353 |     }
+354 |     
+355 |     func moveToLineStartNonWhitespace() { // ^
+    |          |- error: method 'moveToLineStartNonWhitespace()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+    |          `- note: mark the instance method as 'public' to satisfy the requirement
+356 |         if let text = getText(), let currentRange = getSelectedRange() {
+357 |              let currentIndex = getActualCursorIndex(from: currentRange)
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/AccessibilityManager.swift:370:10: error: method 'moveToStartOfDocument()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+368 |     // MARK: - Document Motions
+369 |     
+370 |     func moveToStartOfDocument() { // gg
+    |          |- error: method 'moveToStartOfDocument()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+    |          `- note: mark the instance method as 'public' to satisfy the requirement
+371 |         // Using AX for whole document is excessive/hard (getting full text range).
+372 |         // Standard macOS is Cmd+Up Arrow.
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/AccessibilityManager.swift:376:10: error: method 'moveToEndOfDocument()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+374 |     }
+375 |     
+376 |     func moveToEndOfDocument() { // G
+    |          |- error: method 'moveToEndOfDocument()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+    |          `- note: mark the instance method as 'public' to satisfy the requirement
+377 |         // Standard macOS is Cmd+Down Arrow.
+378 |         simulateKeyPress(keyCode: 125, flags: .maskCommand)
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/AccessibilityManager.swift:383:10: error: method 'moveToNextOccurrence(of:stopBefore:)' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+381 |     // MARK: - Character Search Motions
+382 |     
+383 |     func moveToNextOccurrence(of char: String, stopBefore: Bool) {
+    |          |- error: method 'moveToNextOccurrence(of:stopBefore:)' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+    |          `- note: mark the instance method as 'public' to satisfy the requirement
+384 |         if let text = getText(), let currentRange = getSelectedRange() {
+385 |             let currentIndex = getActualCursorIndex(from: currentRange)
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/AccessibilityManager.swift:394:10: error: method 'selectInnerObject(char:)' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+392 |     }
+393 |     
+394 |     func selectInnerObject(char: String) {
+    |          |- error: method 'selectInnerObject(char:)' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+    |          `- note: mark the instance method as 'public' to satisfy the requirement
+395 |         if let text = getText(), let currentRange = getSelectedRange() {
+396 |             let currentIndex = getActualCursorIndex(from: currentRange)
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/AccessibilityManager.swift:411:10: error: method 'enterVisualLineMode()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+409 |     // MARK: - Visual Line Mode
+410 |     
+411 |     func enterVisualLineMode() {
+    |          |- error: method 'enterVisualLineMode()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+    |          `- note: mark the instance method as 'public' to satisfy the requirement
+412 |         guard let text = getText(), let currentRange = getSelectedRange() else { return }
+413 |         let currentIndex = getActualCursorIndex(from: currentRange)
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/AccessibilityManager.swift:433:10: error: method 'moveToLineRealEnd()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+431 |     // MARK: - New Motions (A, o, O)
+432 |     
+433 |     func moveToLineRealEnd() {
+    |          |- error: method 'moveToLineRealEnd()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+    |          `- note: mark the instance method as 'public' to satisfy the requirement
+434 |         // Disable block cursor for 'A' and 'o' to ensure we have a caret at the end, not a selection of the last char/newline
+435 |         isBlockCursor = false
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/AccessibilityManager.swift:447:10: error: method 'openNewLineBelow()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+445 |     }
+446 |     
+447 |     func openNewLineBelow() {
+    |          |- error: method 'openNewLineBelow()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+    |          `- note: mark the instance method as 'public' to satisfy the requirement
+448 |         // 'o'
+449 |         isBlockCursor = false
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/AccessibilityManager.swift:456:10: error: method 'openNewLineAbove()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+454 |     }
+455 |     
+456 |     func openNewLineAbove() {
+    |          |- error: method 'openNewLineAbove()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+    |          `- note: mark the instance method as 'public' to satisfy the requirement
+457 |         // 'O'
+458 |         isBlockCursor = false
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/AccessibilityManager.swift:471:10: error: method 'deleteVisualLine()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+469 |     // MARK: - Edit Operations
+470 |     
+471 |     func deleteVisualLine() {
+    |          |- error: method 'deleteVisualLine()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+    |          `- note: mark the instance method as 'public' to satisfy the requirement
+472 |         // For 'd' in Visual Line mode: We want to delete the whole line INCLUDING newline.
+473 |         // The current selection (visual) excludes newline for display purposes.
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/AccessibilityManager.swift:496:10: error: method 'deleteCurrentCharacter()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+494 |     }
+495 |     
+496 |     func deleteCurrentCharacter() { // x
+    |          |- error: method 'deleteCurrentCharacter()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+    |          `- note: mark the instance method as 'public' to satisfy the requirement
+497 |         // Try AX Selection Delete first?
+498 |         // Actually, simulating Forward Delete (117) is usually safe if we are not at EOL.
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/AccessibilityManager.swift:503:10: error: method 'undo()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+501 |     }
+502 |     
+503 |     func undo() { // u
+    |          |- error: method 'undo()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+    |          `- note: mark the instance method as 'public' to satisfy the requirement
+504 |         // Cmd+Z
+505 |         simulateKeyPress(keyCode: 6, flags: .maskCommand)
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/AccessibilityManager.swift:508:10: error: method 'redo()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+506 |     }
+507 |     
+508 |     func redo() { // Ctrl-r (Vim) -> Cmd+Shift+Z (macOS Standard)
+    |          |- error: method 'redo()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+    |          `- note: mark the instance method as 'public' to satisfy the requirement
+509 |         simulateKeyPress(keyCode: 6, flags: [.maskCommand, .maskShift])
+510 |     }
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/AccessibilityManager.swift:512:10: error: method 'replaceCurrentCharacter(with:flags:)' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+510 |     }
+511 |     
+512 |     func replaceCurrentCharacter(with charCode: CGKeyCode, flags: CGEventFlags) { // r + char
+    |          |- error: method 'replaceCurrentCharacter(with:flags:)' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+    |          `- note: mark the instance method as 'public' to satisfy the requirement
+513 |         // Attempt AX replacement first (Cleanest)
+514 |         // 1. Convert charCode to string? (Hard without mapping, so let's skip pure AX text injection for now unless we have the char)
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/AccessibilityManager.swift:582:10: error: method 'moveCursor' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+580 |     // MARK: - Movement simulation (Fallback)
+581 |     
+582 |     func moveCursor(_ direction: Direction) {
+    |          |- error: method 'moveCursor' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+    |          `- note: mark the instance method as 'public' to satisfy the requirement
+583 |         // Try AX for Left/Right to preserve block cursor
+584 |         // AND ensure we calculate from the *active* cursor end in Visual Mode
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/AppDelegate.swift:5:14: error: declaration can not have multiple global actor attributes ('MainActor' and 'MainActor')
+ 3 | @MainActor
+ 4 | @MainActor
+ 5 | public class AppDelegate: NSObject, NSApplicationDelegate, VimEngineUIDelegate {
+   |              `- error: declaration can not have multiple global actor attributes ('MainActor' and 'MainActor')
+ 6 |     var statusItem: NSStatusItem!
+ 7 |     var hook: KeyboardHook?
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/AppDelegate.swift:89:10: error: method 'didSwitchMode' must be declared public because it matches a requirement in public protocol 'VimEngineUIDelegate'
+87 |     // MARK: - VimEngineUIDelegate
+88 |     
+89 |     func didSwitchMode(_ mode: VimMode) {
+   |          |- error: method 'didSwitchMode' must be declared public because it matches a requirement in public protocol 'VimEngineUIDelegate'
+   |          `- note: mark the instance method as 'public' to satisfy the requirement
+90 |         modeIndicator?.show(mode: mode)
+91 |     }
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/AppDelegate.swift:93:10: error: method 'didHideOverlay()' must be declared public because it matches a requirement in public protocol 'VimEngineUIDelegate'
+91 |     }
+92 |     
+93 |     func didHideOverlay() {
+   |          |- error: method 'didHideOverlay()' must be declared public because it matches a requirement in public protocol 'VimEngineUIDelegate'
+   |          `- note: mark the instance method as 'public' to satisfy the requirement
+94 |         modeIndicator?.hide()
+95 |     }
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/ModeIndicator.swift:5:14: error: declaration can not have multiple global actor attributes ('MainActor' and 'MainActor')
+ 3 | @MainActor
+ 4 | @MainActor
+ 5 | public class ModeIndicator {
+   |              `- error: declaration can not have multiple global actor attributes ('MainActor' and 'MainActor')
+ 6 |     private var window: NSWindow!
+ 7 |     private var textField: NSTextField!
+[6/9] Compiling VimOSCore AccessibilityManager.swift
+/Users/loi/workspace/vimos/Sources/VimOSCore/AccessibilityManager.swift:58:10: error: method 'setBlockCursor' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+ 56 |     public init() {}
+ 57 |     
+ 58 |     func setBlockCursor(_ enabled: Bool) {
+    |          |- error: method 'setBlockCursor' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+    |          `- note: mark the instance method as 'public' to satisfy the requirement
+ 59 |         isBlockCursor = enabled
+ 60 |         // Refresh current cursor if possible
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/AccessibilityManager.swift:68:10: error: method 'enterVisualMode()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+ 66 |     // MARK: - Visual Mode
+ 67 |     
+ 68 |     func enterVisualMode() {
+    |          |- error: method 'enterVisualMode()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+    |          `- note: mark the instance method as 'public' to satisfy the requirement
+ 69 |         if let currentRange = getSelectedRange() {
+ 70 |             visualAnchorIndex = currentRange.location
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/AccessibilityManager.swift:74:10: error: method 'exitVisualMode()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+ 72 |     }
+ 73 |     
+ 74 |     func exitVisualMode() {
+    |          |- error: method 'exitVisualMode()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+    |          `- note: mark the instance method as 'public' to satisfy the requirement
+ 75 |         // Collapse selection to cursor
+ 76 |         if let currentRange = getSelectedRange() {
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/AccessibilityManager.swift:88:10: error: method 'prepareForInsertMode(collapseSelection:)' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+ 86 |     }
+ 87 |     
+ 88 |     func prepareForInsertMode(collapseSelection: Bool = true) {
+    |          |- error: method 'prepareForInsertMode(collapseSelection:)' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+    |          `- note: mark the instance method as 'public' to satisfy the requirement
+ 89 |         // Atomic transition to Insert Mode.
+ 90 |         // We want to collapse the selection to the start (standard Vim 'i' behavior).
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/AccessibilityManager.swift:267:10: error: method 'moveWordForward()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+265 |     }
+266 |     
+267 |     func moveWordForward() {
+    |          |- error: method 'moveWordForward()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+    |          `- note: mark the instance method as 'public' to satisfy the requirement
+268 |         if let text = getText(), let currentRange = getSelectedRange() {
+269 |             let currentIndex = getActualCursorIndex(from: currentRange)
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/AccessibilityManager.swift:281:10: error: method 'moveWordBackward()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+279 |     }
+280 |     
+281 |     func moveWordBackward() {
+    |          |- error: method 'moveWordBackward()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+    |          `- note: mark the instance method as 'public' to satisfy the requirement
+282 |         if let text = getText(), let currentRange = getSelectedRange() {
+283 |              let currentIndex = getActualCursorIndex(from: currentRange)
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/AccessibilityManager.swift:295:10: error: method 'moveToEndOfWord()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+293 |     }
+294 |     
+295 |     func moveToEndOfWord() {
+    |          |- error: method 'moveToEndOfWord()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+    |          `- note: mark the instance method as 'public' to satisfy the requirement
+296 |         if let text = getText(), let currentRange = getSelectedRange() {
+297 |             let currentIndex = getActualCursorIndex(from: currentRange)
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/AccessibilityManager.swift:309:10: error: method 'moveToLineStart()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+307 |     // MARK: - Line Operations
+308 |     
+309 |     func moveToLineStart() { // 0
+    |          |- error: method 'moveToLineStart()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+    |          `- note: mark the instance method as 'public' to satisfy the requirement
+310 |         if let text = getText(), let currentRange = getSelectedRange() {
+311 |              let currentIndex = getActualCursorIndex(from: currentRange)
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/AccessibilityManager.swift:322:10: error: method 'moveToLineEnd()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+320 |     }
+321 |     
+322 |     func moveToLineEnd() { // $
+    |          |- error: method 'moveToLineEnd()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+    |          `- note: mark the instance method as 'public' to satisfy the requirement
+323 |         if let text = getText(), let currentRange = getSelectedRange() {
+324 |              let currentIndex = getActualCursorIndex(from: currentRange)
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/AccessibilityManager.swift:338:10: error: method 'selectCurrentLineContent()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+336 |     /// Selects the content of the current line (excluding newline).
+337 |     /// Returns true if content was selected (length > 0), false if line is empty (length 0).
+338 |     func selectCurrentLineContent() -> Bool {
+    |          |- error: method 'selectCurrentLineContent()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+    |          `- note: mark the instance method as 'public' to satisfy the requirement
+339 |         guard let text = getText(), let currentRange = getSelectedRange() else { return false }
+340 |         let currentIndex = getActualCursorIndex(from: currentRange)
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/AccessibilityManager.swift:355:10: error: method 'moveToLineStartNonWhitespace()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+353 |     }
+354 |     
+355 |     func moveToLineStartNonWhitespace() { // ^
+    |          |- error: method 'moveToLineStartNonWhitespace()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+    |          `- note: mark the instance method as 'public' to satisfy the requirement
+356 |         if let text = getText(), let currentRange = getSelectedRange() {
+357 |              let currentIndex = getActualCursorIndex(from: currentRange)
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/AccessibilityManager.swift:370:10: error: method 'moveToStartOfDocument()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+368 |     // MARK: - Document Motions
+369 |     
+370 |     func moveToStartOfDocument() { // gg
+    |          |- error: method 'moveToStartOfDocument()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+    |          `- note: mark the instance method as 'public' to satisfy the requirement
+371 |         // Using AX for whole document is excessive/hard (getting full text range).
+372 |         // Standard macOS is Cmd+Up Arrow.
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/AccessibilityManager.swift:376:10: error: method 'moveToEndOfDocument()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+374 |     }
+375 |     
+376 |     func moveToEndOfDocument() { // G
+    |          |- error: method 'moveToEndOfDocument()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+    |          `- note: mark the instance method as 'public' to satisfy the requirement
+377 |         // Standard macOS is Cmd+Down Arrow.
+378 |         simulateKeyPress(keyCode: 125, flags: .maskCommand)
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/AccessibilityManager.swift:383:10: error: method 'moveToNextOccurrence(of:stopBefore:)' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+381 |     // MARK: - Character Search Motions
+382 |     
+383 |     func moveToNextOccurrence(of char: String, stopBefore: Bool) {
+    |          |- error: method 'moveToNextOccurrence(of:stopBefore:)' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+    |          `- note: mark the instance method as 'public' to satisfy the requirement
+384 |         if let text = getText(), let currentRange = getSelectedRange() {
+385 |             let currentIndex = getActualCursorIndex(from: currentRange)
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/AccessibilityManager.swift:394:10: error: method 'selectInnerObject(char:)' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+392 |     }
+393 |     
+394 |     func selectInnerObject(char: String) {
+    |          |- error: method 'selectInnerObject(char:)' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+    |          `- note: mark the instance method as 'public' to satisfy the requirement
+395 |         if let text = getText(), let currentRange = getSelectedRange() {
+396 |             let currentIndex = getActualCursorIndex(from: currentRange)
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/AccessibilityManager.swift:411:10: error: method 'enterVisualLineMode()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+409 |     // MARK: - Visual Line Mode
+410 |     
+411 |     func enterVisualLineMode() {
+    |          |- error: method 'enterVisualLineMode()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+    |          `- note: mark the instance method as 'public' to satisfy the requirement
+412 |         guard let text = getText(), let currentRange = getSelectedRange() else { return }
+413 |         let currentIndex = getActualCursorIndex(from: currentRange)
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/AccessibilityManager.swift:433:10: error: method 'moveToLineRealEnd()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+431 |     // MARK: - New Motions (A, o, O)
+432 |     
+433 |     func moveToLineRealEnd() {
+    |          |- error: method 'moveToLineRealEnd()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+    |          `- note: mark the instance method as 'public' to satisfy the requirement
+434 |         // Disable block cursor for 'A' and 'o' to ensure we have a caret at the end, not a selection of the last char/newline
+435 |         isBlockCursor = false
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/AccessibilityManager.swift:447:10: error: method 'openNewLineBelow()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+445 |     }
+446 |     
+447 |     func openNewLineBelow() {
+    |          |- error: method 'openNewLineBelow()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+    |          `- note: mark the instance method as 'public' to satisfy the requirement
+448 |         // 'o'
+449 |         isBlockCursor = false
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/AccessibilityManager.swift:456:10: error: method 'openNewLineAbove()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+454 |     }
+455 |     
+456 |     func openNewLineAbove() {
+    |          |- error: method 'openNewLineAbove()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+    |          `- note: mark the instance method as 'public' to satisfy the requirement
+457 |         // 'O'
+458 |         isBlockCursor = false
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/AccessibilityManager.swift:471:10: error: method 'deleteVisualLine()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+469 |     // MARK: - Edit Operations
+470 |     
+471 |     func deleteVisualLine() {
+    |          |- error: method 'deleteVisualLine()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+    |          `- note: mark the instance method as 'public' to satisfy the requirement
+472 |         // For 'd' in Visual Line mode: We want to delete the whole line INCLUDING newline.
+473 |         // The current selection (visual) excludes newline for display purposes.
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/AccessibilityManager.swift:496:10: error: method 'deleteCurrentCharacter()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+494 |     }
+495 |     
+496 |     func deleteCurrentCharacter() { // x
+    |          |- error: method 'deleteCurrentCharacter()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+    |          `- note: mark the instance method as 'public' to satisfy the requirement
+497 |         // Try AX Selection Delete first?
+498 |         // Actually, simulating Forward Delete (117) is usually safe if we are not at EOL.
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/AccessibilityManager.swift:503:10: error: method 'undo()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+501 |     }
+502 |     
+503 |     func undo() { // u
+    |          |- error: method 'undo()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+    |          `- note: mark the instance method as 'public' to satisfy the requirement
+504 |         // Cmd+Z
+505 |         simulateKeyPress(keyCode: 6, flags: .maskCommand)
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/AccessibilityManager.swift:508:10: error: method 'redo()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+506 |     }
+507 |     
+508 |     func redo() { // Ctrl-r (Vim) -> Cmd+Shift+Z (macOS Standard)
+    |          |- error: method 'redo()' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+    |          `- note: mark the instance method as 'public' to satisfy the requirement
+509 |         simulateKeyPress(keyCode: 6, flags: [.maskCommand, .maskShift])
+510 |     }
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/AccessibilityManager.swift:512:10: error: method 'replaceCurrentCharacter(with:flags:)' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+510 |     }
+511 |     
+512 |     func replaceCurrentCharacter(with charCode: CGKeyCode, flags: CGEventFlags) { // r + char
+    |          |- error: method 'replaceCurrentCharacter(with:flags:)' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+    |          `- note: mark the instance method as 'public' to satisfy the requirement
+513 |         // Attempt AX replacement first (Cleanest)
+514 |         // 1. Convert charCode to string? (Hard without mapping, so let's skip pure AX text injection for now unless we have the char)
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/AccessibilityManager.swift:582:10: error: method 'moveCursor' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+580 |     // MARK: - Movement simulation (Fallback)
+581 |     
+582 |     func moveCursor(_ direction: Direction) {
+    |          |- error: method 'moveCursor' must be declared public because it matches a requirement in public protocol 'AccessibilityManagerProtocol'
+    |          `- note: mark the instance method as 'public' to satisfy the requirement
+583 |         // Try AX for Left/Right to preserve block cursor
+584 |         // AND ensure we calculate from the *active* cursor end in Visual Mode
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/AccessibilityManager.swift:206:13: warning: variable 'length' was never mutated; consider changing to 'let' constant
+204 |         // We'll try to get bounds of the character at `cursorIndex`.
+205 |         
+206 |         var length = 1
+    |             `- warning: variable 'length' was never mutated; consider changing to 'let' constant
+207 |         if let text = getText() {
+208 |             if cursorIndex >= text.count {
+
+/Users/loi/workspace/vimos/Sources/VimOSCore/AccessibilityManager.swift:214:25: warning: variable 'prevRange' was never mutated; consider changing to 'let' constant
+212 |                 if text.count > 0 {
+213 |                     let prevIndex = text.count - 1
+214 |                     var prevRange = CFRange(location: prevIndex, length: 1)
+    |                         `- warning: variable 'prevRange' was never mutated; consider changing to 'let' constant
+215 |                      if let rect = getBoundsFor(range: prevRange, element: element) {
+216 |                          // Shift it to the right approximately (width of char)

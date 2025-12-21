@@ -1,4 +1,5 @@
 import Cocoa
+import VimOSCore
 
 import Cocoa
 

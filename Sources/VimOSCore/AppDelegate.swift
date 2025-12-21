@@ -1,14 +1,18 @@
 import Cocoa
 
 @MainActor
-class AppDelegate: NSObject, NSApplicationDelegate, VimEngineUIDelegate {
+public class AppDelegate: NSObject, NSApplicationDelegate, VimEngineUIDelegate {
     var statusItem: NSStatusItem!
     var hook: KeyboardHook?
     var vimEngine: VimEngine?
     var modeIndicator: ModeIndicator?
     var isEnabled = true
 
-    func applicationDidFinishLaunching(_ notification: Notification) {
+    public override init() {
+        super.init()
+    }
+
+    public func applicationDidFinishLaunching(_ notification: Notification) {
         // Setup Status Bar
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = statusItem.button {
@@ -81,11 +85,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, VimEngineUIDelegate {
     
     // MARK: - VimEngineUIDelegate
     
-    func didSwitchMode(_ mode: VimMode) {
+    public func didSwitchMode(_ mode: VimMode) {
         modeIndicator?.show(mode: mode)
     }
     
-    func didHideOverlay() {
+    public func didHideOverlay() {
         modeIndicator?.hide()
     }
 }
