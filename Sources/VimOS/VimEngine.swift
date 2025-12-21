@@ -106,8 +106,8 @@ class VimEngine: KeyboardHookDelegate {
             
             // 'i' to insert or Inner Object Modifier
             if (mode == .normal || mode == .visual) && keyCode == 34 {
-                if pendingOperator != nil || mode == .visual {
-                    // ci... or vi... -> i means "inner"
+                if pendingOperator != nil {
+                    // ci... -> i means "inner"
                     isWaitingForTextObject = true
                     return true
                 }
