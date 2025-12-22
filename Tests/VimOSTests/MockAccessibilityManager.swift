@@ -31,18 +31,18 @@ class MockAccessibilityManager: AccessibilityManagerProtocol {
 
     // Protocol Conformance
     
-    func setBlockCursor(_ enabled: Bool) {
+    func setBlockCursor(_ enabled: Bool, updateImmediate: Bool = true) {
         isBlockCursorEnabled = enabled
-        methodCalls.append("setBlockCursor(\(enabled))")
+        methodCalls.append("setBlockCursor(\(enabled), updateImmediate: \(updateImmediate))")
     }
     
     func enterVisualMode() {
         methodCalls.append("enterVisualMode")
     }
     
-    func exitVisualMode() {
+    func exitVisualMode(collapseSelection: Bool = true) {
         isVisualLineMode = false
-        methodCalls.append("exitVisualMode")
+        methodCalls.append("exitVisualMode(collapseSelection: \(collapseSelection))")
     }
     
     public func prepareForInsertMode(collapseSelection: Bool) {
@@ -141,6 +141,14 @@ class MockAccessibilityManager: AccessibilityManagerProtocol {
     
     func redo() {
         methodCalls.append("redo")
+    }
+    
+    func paste(after: Bool) {
+        methodCalls.append("paste(after: \(after))")
+    }
+    
+    func pasteInVisual() {
+        methodCalls.append("pasteInVisual")
     }
     
     func replaceCurrentCharacter(with charCode: CGKeyCode, flags: CGEventFlags) {

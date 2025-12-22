@@ -12,9 +12,9 @@ public enum Direction: Sendable {
 public protocol AccessibilityManagerProtocol: AnyObject {
     var isVisualLineMode: Bool { get }
     
-    func setBlockCursor(_ enabled: Bool)
+    func setBlockCursor(_ enabled: Bool, updateImmediate: Bool)
     func enterVisualMode()
-    func exitVisualMode()
+    func exitVisualMode(collapseSelection: Bool)
     func prepareForInsertMode(collapseSelection: Bool)
     
     func moveWordForward()
@@ -47,6 +47,9 @@ public protocol AccessibilityManagerProtocol: AnyObject {
     func redo()
     func replaceCurrentCharacter(with charCode: CGKeyCode, flags: CGEventFlags)
     
+    func paste(after: Bool)
+    func pasteInVisual()
+    
     func moveCursor(_ direction: Direction)
 }
 
@@ -59,8 +62,11 @@ public class AccessibilityManager: AccessibilityManagerProtocol {
 
     public init() {}
     
-    public func setBlockCursor(_ enabled: Bool) {
+    public func setBlockCursor(_ enabled: Bool, updateImmediate: Bool = true) {
         isBlockCursor = enabled
+        
+        if !updateImmediate { return }
+        
         // Refresh current cursor if possible
         if let currentRange = getSelectedRange() {
             setCursor(at: currentRange.location)
@@ -75,18 +81,22 @@ public class AccessibilityManager: AccessibilityManagerProtocol {
         }
     }
     
-    public func exitVisualMode() {
+    public func exitVisualMode(collapseSelection: Bool = true) {
         // Collapse selection to cursor
-        if let currentRange = getSelectedRange() {
-            let activeIndex = getActualCursorIndex(from: currentRange)
-            // Clear anchor first so setCursor behaves normally
-            visualAnchorIndex = nil
-            isVisualLineMode = false
-            setCursor(at: activeIndex)
-        } else {
-            visualAnchorIndex = nil
-            isVisualLineMode = false
+        if collapseSelection {
+            if let currentRange = getSelectedRange() {
+                let activeIndex = getActualCursorIndex(from: currentRange)
+                // Clear anchor first so setCursor behaves normally
+                visualAnchorIndex = nil
+                isVisualLineMode = false
+                setCursor(at: activeIndex)
+                return
+            }
         }
+        
+        // Just clear state
+        visualAnchorIndex = nil
+        isVisualLineMode = false
     }
     
     public func prepareForInsertMode(collapseSelection: Bool = true) {
@@ -604,6 +614,69 @@ public class AccessibilityManager: AccessibilityManagerProtocol {
     
     public func redo() { // Ctrl-r (Vim) -> Cmd+Shift+Z (macOS Standard)
         simulateKeyPress(keyCode: 6, flags: [.maskCommand, .maskShift])
+    }
+    
+    public func paste(after: Bool) {
+        // Read from Clipboard
+        guard let text = NSPasteboard.general.string(forType: .string) else { return }
+        
+        let isLinewise = text.hasSuffix("\n")
+        
+        if isLinewise {
+             // Linewise Paste
+             if after { // p
+                 // Paste AFTER the current line.
+                 // Move to end of line, open new line (simulated), paste.
+                 // OR: Move to next line start, paste?
+                 // Standard Vim p for linewise: Pastes BELOW the current line.
+                 
+                 // Move to End of Line
+                 moveToLineRealEnd()
+                 // Simulate Return to create new line below
+                 simulateKeyPress(keyCode: 36)
+                 
+                 // Now we are on a new empty line. Paste.
+                 // Using Cmd+V
+                 simulateKeyPress(keyCode: 9, flags: .maskCommand)
+                 
+                 // Vim usually leaves cursor at start of pasted text?
+                 // TODO: Refine cursor position if needed.
+             } else { // P
+                 // Paste BEFORE current line.
+                 // Move to Start of Line
+                 moveToLineStart()
+                 
+                 // Paste (inserts text and pushes current line down implicitly if it has newline)
+                 // But wait, if text has newline at end, we paste "Line\n" at start of "Current".
+                 // Result: "Line\nCurrent" -> Correct.
+                 simulateKeyPress(keyCode: 9, flags: .maskCommand)
+                 
+                 // However, we need to ensure we split the line if we are not at start?
+                 // moveToLineStart ensures we are at start.
+             }
+        } else {
+            // Characterwise Paste
+            if after { // p
+                // Paste AFTER cursor.
+                // Move Right 1 char (unless at end of line?)
+                // If block cursor is on char 'A', pasting 'B' after means 'AB'.
+                // If we are at 'A', and press 'p', we want 'A' then 'B'.
+                // So we move cursor to the right of A, then paste.
+                 
+                moveCursor(.right)
+                simulateKeyPress(keyCode: 9, flags: .maskCommand)
+            } else { // P
+                // Paste BEFORE cursor.
+                // Just paste.
+                simulateKeyPress(keyCode: 9, flags: .maskCommand)
+            }
+        }
+    }
+    
+    public func pasteInVisual() {
+        // In Visual Mode, "Paste" replaces the selection.
+        // Standard macOS behavior for Cmd+V over selection is exactly what we want.
+        simulateKeyPress(keyCode: 9, flags: .maskCommand)
     }
     
     public func replaceCurrentCharacter(with charCode: CGKeyCode, flags: CGEventFlags) { // r + char

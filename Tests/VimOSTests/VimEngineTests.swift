@@ -140,6 +140,7 @@ class VimEngineTests {
         // Back to Normal
         _ = simulateKey(53)
         assertTrue(mockAX.isBlockCursorEnabled)
+        // Explicitly check call log if needed, but isBlockCursorEnabled is sufficient for this test mostly.
     }
     
     func testVisualModeToggle() {
@@ -154,7 +155,7 @@ class VimEngineTests {
         
         // v -> Normal
         _ = simulateKey(9)
-        assertTrue(mockAX.methodCalls.contains("exitVisualMode"))
+        assertTrue(mockAX.methodCalls.contains("exitVisualMode(collapseSelection: true)"))
     }
     
     func testVisualLineModeToggle() {
@@ -169,7 +170,7 @@ class VimEngineTests {
         
         // Esc -> Normal
         _ = simulateKey(53)
-        assertTrue(mockAX.methodCalls.contains("exitVisualMode"))
+        assertTrue(mockAX.methodCalls.contains("exitVisualMode(collapseSelection: true)"))
     }
     
     func testOperators() {
@@ -376,6 +377,52 @@ class VimEngineTests {
         assertFalse(handledComplex, "Complex shortcut should pass through")
     }
     
+    func testPaste() {
+        setUp()
+        print("Running testPaste...")
+        
+        _ = simulateKey(53) // Normal Mode
+        
+        // p
+        _ = simulateKey(35)
+        assertTrue(mockAX.methodCalls.contains("paste(after: true)"), "p should trigger paste(after: true)")
+        
+        // P
+        _ = simulateKey(35, flags: .maskShift)
+        assertTrue(mockAX.methodCalls.contains("paste(after: false)"), "P should trigger paste(after: false)")
+    }
+    
+    func testVisualPaste() {
+        setUp()
+        print("Running testVisualPaste...")
+        
+        _ = simulateKey(53) // Normal Mode
+        
+        // v -> Visual
+        _ = simulateKey(9)
+        assertTrue(mockAX.methodCalls.contains("enterVisualMode"))
+        
+        // p
+        _ = simulateKey(35)
+        assertTrue(mockAX.methodCalls.contains("pasteInVisual"))
+        assertTrue(mockAX.methodCalls.contains("exitVisualMode(collapseSelection: false)"), "Should exit visual mode without collapsing")
+        // Check for deferred cursor update
+        assertTrue(mockAX.methodCalls.contains("setBlockCursor(true, updateImmediate: false)"), "Should defer cursor update to avoid racing with paste")
+        
+        // Test Visual Line Mode P
+        setUp() // Reset
+        _ = simulateKey(53)
+        // V (Shift+v)
+        _ = simulateKey(9, flags: .maskShift)
+        assertTrue(mockAX.methodCalls.contains("enterVisualLineMode"))
+        
+        // P (Shift+p)
+        _ = simulateKey(35, flags: .maskShift)
+        assertTrue(mockAX.methodCalls.contains("pasteInVisual"))
+        assertTrue(mockAX.methodCalls.contains("exitVisualMode(collapseSelection: false)"))
+        assertTrue(mockAX.methodCalls.contains("setBlockCursor(true, updateImmediate: false)"))
+    }
+    
     func testModifierFlagsChanged() {
         setUp()
         print("Running testModifierFlagsChanged...")
@@ -407,6 +454,8 @@ class VimEngineTests {
         testNewLineOps()
         testKeyMapping()
         testSystemShortcuts()
+        testPaste()
+        testVisualPaste()
         testModifierFlagsChanged()
         
         print("\n=== Test Summary ===")

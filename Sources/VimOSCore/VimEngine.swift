@@ -94,7 +94,7 @@ public class VimEngine: KeyboardHookDelegate {
             }
             if pendingOperator != nil {
                 pendingOperator = nil
-                accessibilityManager.exitVisualMode()
+                accessibilityManager.exitVisualMode(collapseSelection: true)
                 return true
             }
             if mode == .insert {
@@ -332,10 +332,25 @@ public class VimEngine: KeyboardHookDelegate {
                     isWaitingForReplaceChar = true
                     return true
                 }
-            
-            case 17: // t (Till motion)
+                        case 17: // t (Till motion)
                 isWaitingForTillChar = true
                 return true
+            
+            case 35: // p
+                if mode == .visual {
+                    accessibilityManager.pasteInVisual()
+                    switchMode(to: .normal, collapseSelection: false, updateCursorImmediate: false)
+                    return true
+                }
+                
+                if mode == .normal {
+                    if flags.contains(.maskShift) { // P
+                        accessibilityManager.paste(after: false)
+                    } else { // p
+                        accessibilityManager.paste(after: true)
+                    }
+                    return true
+                }
                 
             case 2: // d (Delete)
                  if mode == .visual {
@@ -383,7 +398,7 @@ public class VimEngine: KeyboardHookDelegate {
         }
     }
 
-    private func switchMode(to newMode: VimMode, collapseSelection: Bool = true) {
+    private func switchMode(to newMode: VimMode, collapseSelection: Bool = true, updateCursorImmediate: Bool = true) {
         // Clear any pending operator when switching modes to avoid state leaks
         pendingOperator = nil
         
@@ -397,12 +412,12 @@ public class VimEngine: KeyboardHookDelegate {
             if previousMode == .insert {
                  accessibilityManager.moveCursor(.left)
             }
-             accessibilityManager.exitVisualMode()
-             accessibilityManager.setBlockCursor(true)
+             accessibilityManager.exitVisualMode(collapseSelection: collapseSelection)
+             accessibilityManager.setBlockCursor(true, updateImmediate: updateCursorImmediate)
              
         } else if mode == .visual {
             accessibilityManager.enterVisualMode()
-            accessibilityManager.setBlockCursor(true)
+            accessibilityManager.setBlockCursor(true, updateImmediate: true)
             
         } else {
             // Switching to Insert Mode
