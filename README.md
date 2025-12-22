@@ -67,6 +67,37 @@ VimOS brings Vim-like modal editing capabilities to the macOS operating system e
 - `y`: Yank selection
 - `p`: Paste over selection (Replace)
 
+## Installation & Build
+
+### Recommended: Download Release
+
+Download the latest pre-built release (ZIP) from the Releases page.
+
+1. Unzip the archive.
+2. Move `VimOS.app` to your `/Applications` folder.
+3. Launch `VimOS.app`.
+4. Grant Accessibility permissions when prompted.
+
+### Building from Source
+
+To build the application manually, use the provided release script:
+
+```bash
+./scripts/release.sh v1.0.0
+```
+
+This command will:
+
+1. Build the Swift project in Release mode.
+2. Generate the `VimOS.app` bundle with the correct icon and structure.
+3. Create a `VimOS_v1.0.0.zip` archive ready for distribution.
+
+Alternatively, for development/debugging:
+
+```bash
+swift run VimOS
+```
+
 ## Configuration
 
 VimOS supports customizable key mappings and application suppression via a JSON configuration file located at `~/.vimos/config.json`.
