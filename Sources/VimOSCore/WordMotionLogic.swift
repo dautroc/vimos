@@ -110,7 +110,7 @@ class WordMotionLogic {
             i += 1
         }
         
-        return i
+        return i - 1
     }
     
     static func getLineStartIndex(text: String, currentIndex: Int) -> Int {
