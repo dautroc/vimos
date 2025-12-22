@@ -42,6 +42,47 @@ VimOS brings Vim-like modal editing capabilities to the macOS operating system e
 - `d` (in Visual): Delete selection
 - `c` (in Visual): Change selection
 
+## Configuration
+
+VimOS supports customizable key mappings and application suppression via a JSON configuration file located at `~/.vimos/config.json`.
+
+### Example Configuration
+
+```json
+{
+  "mappings": [
+    {
+      "from": "jk",
+      "to": "<esc>",
+      "modes": ["insert"]
+    },
+    {
+      "from": "gh",
+      "to": "^",
+      "modes": ["normal"]
+    },
+    {
+      "from": "gl",
+      "to": "$",
+      "modes": ["normal"]
+    }
+  ],
+  "ignoredApplications": [
+    "com.apple.Terminal",
+    "com.googlecode.iterm2",
+    "com.microsoft.VSCode"
+  ]
+}
+```
+
+### Options
+
+- **mappings**: Array of mapping objects.
+  - `from`: The key sequence to trigger the mapping (case-sensitive).
+  - `to`: The target key or action (supports `^`, `$`, `<esc>`).
+  - `modes`: List of modes where the mapping is active (`normal`, `insert`, `visual`). Defaults to all if omitted.
+- **ignoredApplications**: List of Bundle Identifiers for applications where VimOS should be disabled.
+
 ## Usage
 
 ### Running the Application

@@ -52,6 +52,14 @@ class VimEngineTests {
         event.flags = flags
         return engine.handle(keyEvent: event)
     }
+    
+    func simulateFlagsChanged(_ keyCode: Int, flags: CGEventFlags) -> Bool {
+        guard let source = CGEventSource(stateID: .hidSystemState) else { return false }
+        guard let event = CGEvent(keyboardEventSource: source, virtualKey: CGKeyCode(keyCode), keyDown: true) else { return false }
+        event.type = .flagsChanged
+        event.flags = flags
+        return engine.handle(keyEvent: event)
+    }
 
     // MARK: - Tests
     
@@ -265,7 +273,123 @@ class VimEngineTests {
         _ = simulateKey(31, flags: .maskShift)
         assertTrue(mockAX.methodCalls.contains("openNewLineAbove"))
     }
-
+    
+    func testKeyMapping() {
+        setUp()
+        print("Running testKeyMapping...")
+        
+        // Setup Config
+        let config = VimOSConfig(mappings: [
+            KeyMapping(from: "gh", to: "^"),
+            KeyMapping(from: "gh", to: "^"),
+            KeyMapping(from: "gl", to: "$"),
+            KeyMapping(from: "jk", to: "<esc>")
+        ], ignoredApplications: [])
+        ConfigManager.shared.setConfig(config)
+        
+        // 1. Test "gh" -> "^" in Normal Mode
+        _ = simulateKey(53) // ESC -> Normal
+        
+        // Simulate 'g' (KeyCode 5)
+        let handledG = simulateKey(5)
+        assertTrue(handledG, "Trigger key 'g' should be swallowed")
+        
+        // Simulate 'h' (KeyCode 4)
+        let handledH = simulateKey(4)
+        assertTrue(handledH, "Trigger key 'h' should be handled")
+        
+        // Should have executed "moveToLineStartNonWhitespace" (Action of ^)
+        // Check if "moveToLineStartNonWhitespace" is in methodCalls
+        // Note: mockAX.methodCalls is a list. Last one should be relevant?
+        // ^ calls moveToLineStartNonWhitespace.
+        assertTrue(mockAX.methodCalls.contains("moveToLineStartNonWhitespace"), "gh should trigger ^ action")
+        
+        // ^ calls moveToLineStartNonWhitespace.
+        assertTrue(mockAX.methodCalls.contains("moveToLineStartNonWhitespace"), "gh should trigger ^ action")
+        
+        // 1b. Test "gl" -> "$" in Normal Mode
+        _ = simulateKey(53) // Ensure Normal
+        // Simulate 'g' (KeyCode 5)
+        _ = simulateKey(5)
+        // Simulate 'l' (KeyCode 37)
+        _ = simulateKey(37)
+        
+        // Should have executed "moveToLineEnd" (Action of $)
+        // $ is mapped to Shift+4. Logic should produce Shift+4 event -> VimEngine -> handle(Shift+4) -> moveToLineEnd
+        assertTrue(mockAX.methodCalls.contains("moveToLineEnd"), "gl should trigger $ action")
+        
+        // 2. Test "jk" -> "<esc>" in Insert Mode
+        setUp() // Reset state (starts in Insert)
+        
+        // Ensure we are in insert (block cursor false)
+        assertFalse(mockAX.isBlockCursorEnabled, "Should start in Insert Mode")
+        
+        // Simulate 'j' (KeyCode 38)
+        let handledJ = simulateKey(38)
+        assertTrue(handledJ, "Trigger key 'j' should be swallowed in Insert Mode because of mapping")
+        
+        // Simulate 'k' (KeyCode 40)
+        let handledK = simulateKey(40)
+        assertTrue(handledK, "Trigger key 'k' should be handled")
+        
+        // Should Switch to Normal Mode (Block Cursor True)
+        // Also Esc in Insert Mode usually moves cursor left?
+        assertTrue(mockAX.isBlockCursorEnabled, "jk should switch to Normal Mode")
+        
+        // Reset Config
+        ConfigManager.shared.setConfig(.defaults)
+    }
+    
+    func testSystemShortcuts() {
+        setUp()
+        print("Running testSystemShortcuts...")
+        _ = simulateKey(53) // Normal Mode
+        
+        // Simulate Cmd+C (KeyCode 8 + Command)
+        let handledCmdC = simulateKey(8, flags: .maskCommand)
+        assertFalse(handledCmdC, "Cmd+C should NOT be handled by VimHub (should pass through)")
+        
+        // Simulate Cmd+V (KeyCode 9 + Command)
+        let handledCmdV = simulateKey(9, flags: .maskCommand)
+        assertFalse(handledCmdV, "Cmd+V should NOT be handled by VimHub")
+        
+        // Simulate Option+Left (KeyCode 123 + Option)
+        let handledOptionLeft = simulateKey(123, flags: .maskAlternate)
+        assertFalse(handledOptionLeft, "Option+Left should pass through")
+        
+        // Simulate Ctrl+A (KeyCode 0 + Control)
+        let handledCtrlA = simulateKey(0, flags: .maskControl)
+        assertFalse(handledCtrlA, "Ctrl+A should pass through")
+        
+        // Exception: Ctrl+R (Redo)
+        // Ensure mock has no previous Redo call
+        // mockAX.methodCalls.removeAll() // ideally
+        
+        let handledCtrlR = simulateKey(15, flags: .maskControl)
+        assertTrue(handledCtrlR, "Ctrl+R (Redo) SHOULD be handled by VimHub")
+        assertTrue(mockAX.methodCalls.contains("redo"), "Ctrl+R should trigger redo")
+        
+        // Simulate Complex Shortcut (Cmd+Opt+Shift+Ctrl+Space)
+        // Space = 49
+        let complexFlags: CGEventFlags = [.maskCommand, .maskAlternate, .maskShift, .maskControl]
+        let handledComplex = simulateKey(49, flags: complexFlags)
+        assertFalse(handledComplex, "Complex shortcut should pass through")
+    }
+    
+    func testModifierFlagsChanged() {
+        setUp()
+        print("Running testModifierFlagsChanged...")
+        
+        // Simulate pressing Shift (Left Shift keycode 56)
+        // flagsChanged event
+        let handledShift = simulateFlagsChanged(56, flags: .maskShift)
+        assertFalse(handledShift, "Shift key press (flagsChanged) should pass through")
+        
+        // Simulate pressing Control (Left Control keycode 59)
+        let handledCtrl = simulateFlagsChanged(59, flags: .maskControl)
+        assertFalse(handledCtrl, "Control key press (flagsChanged) should pass through")
+    }
+    
     func runAll() {
         print("=== Starting VimOS Tests ===")
         testNormalModeNavigation()
@@ -281,6 +405,9 @@ class VimEngineTests {
         testYankShift()
         testGlobalMotions()
         testNewLineOps()
+        testKeyMapping()
+        testSystemShortcuts()
+        testModifierFlagsChanged()
         
         print("\n=== Test Summary ===")
         print("Passed: \(passed)")

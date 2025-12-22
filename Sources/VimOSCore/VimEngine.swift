@@ -28,18 +28,61 @@ public class VimEngine: KeyboardHookDelegate {
     private var isWaitingForTillChar = false // State for 't' command
     private var isWaitingForTextObject = false // State for 'i' (inner) modifier
     
+    private let keyMappingWorker = KeyMappingWorker()
+    
     public init(accessibilityManager: AccessibilityManagerProtocol = AccessibilityManager()) {
         self.accessibilityManager = accessibilityManager
     }
 
     public func handle(keyEvent: CGEvent) -> Bool {
-        // Pass through events simulated by AccessibilityManager (Magic Number 0x555)
+        // ALWAYS pass through modifier key changes (flagsChanged)
+        // This ensures Left/Right Shift, Ctrl, Alt, Cmd state is preserved
+        if keyEvent.type == .flagsChanged {
+            return false
+        }
+        
         if keyEvent.getIntegerValueField(.eventSourceUserData) == 0x555 {
             return false
+        }
+        
+        // Key Mapping (Skip if internal recursion flag 0x999 is set)
+        if keyEvent.getIntegerValueField(.eventSourceUserData) != 0x999 {
+            let (handled, mappedEvents) = keyMappingWorker.process(keyEvent, mode: mode)
+            if handled {
+                if let events = mappedEvents {
+                    for event in events {
+                        // Mark to skip mapping for recursive call
+                        event.setIntegerValueField(.eventSourceUserData, value: 0x999)
+                        if !self.handle(keyEvent: event) {
+                            // If logic didn't consume it (e.g. valid key in insert mode), post to system
+                            // Mark as simulated (0x555) so Tap -> VimEngine ignores it
+                            event.setIntegerValueField(.eventSourceUserData, value: 0x555)
+                            event.post(tap: .cghidEventTap)
+                        }
+                    }
+                }
+                return true // Swallow original
+            }
         }
 
         let flags = keyEvent.flags
         let keyCode = keyEvent.getIntegerValueField(.keyboardEventKeycode)
+        
+        // 1. Check for Vim-specific Modifier Commands (Exceptions to Passthrough)
+        
+        // Ctrl+r (Redo)
+        if flags.contains(.maskControl) && keyCode == 15 {
+             accessibilityManager.redo()
+             return true
+        }
+        
+        // 2. Pass through System Shortcuts (Cmd, Option, Control)
+        // If it's a modifier combo we didn't handle above, let the system have it.
+        // We check if any of the major modifiers are present. 
+        // Note: Shift is not sufficient on its own (Shift+A is valid input), but Cmd+Shift+Space should pass.
+        if flags.contains(.maskCommand) || flags.contains(.maskAlternate) || flags.contains(.maskControl) {
+            return false
+        }
         
         // Mode Switching Logic
         if keyCode == 53 { // ESC
@@ -283,18 +326,12 @@ public class VimEngine: KeyboardHookDelegate {
                     return true
                 }
                 
-            case 15: // r (Replace) or Ctrl-r (Redo)
-                if flags.contains(.maskControl) {
-                    // Ctrl-r Redo
-                    accessibilityManager.redo()
-                    return true
-                }
+            // Ctrl+r handled at top level
+            case 15: // r (Replace)
                 if mode == .normal {
                     isWaitingForReplaceChar = true
-                    // Update UI implied? No need for indicator change.
                     return true
                 }
-                return true
             
             case 17: // t (Till motion)
                 isWaitingForTillChar = true

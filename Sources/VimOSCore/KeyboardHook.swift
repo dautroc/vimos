@@ -5,15 +5,44 @@ public protocol KeyboardHookDelegate: AnyObject {
     func handle(keyEvent: CGEvent) -> Bool // Returns true if key should be suppressed
 }
 
-public class KeyboardHook {
+public class KeyboardHook: @unchecked Sendable {
     public weak var delegate: KeyboardHookDelegate?
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
     private var isHookActive = false
 
     public var onToggleRequest: (() -> Void)?
+    
+    // Cache for frontmost application to avoid blocking event tap
+    private var currentBundleIdentifier: String?
+    private var observer: NSObjectProtocol?
 
-    public init() {}
+    public init() {
+        startObservingApplicationChanges()
+    }
+    
+    deinit {
+        if let observer = observer {
+            NSWorkspace.shared.notificationCenter.removeObserver(observer)
+        }
+    }
+    
+    private func startObservingApplicationChanges() {
+        // Initial setup
+        self.currentBundleIdentifier = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
+        
+        // Watch for changes
+        observer = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            if let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication {
+                self?.currentBundleIdentifier = app.bundleIdentifier
+                // print("Active App: \(app.bundleIdentifier ?? "Unknown")")
+            }
+        }
+    }
 
     public func start() {
         isHookActive = true
@@ -43,11 +72,22 @@ public class KeyboardHook {
                 guard let refcon = refcon else { return Unmanaged.passUnretained(event) }
                 let hook = Unmanaged<KeyboardHook>.fromOpaque(refcon).takeUnretainedValue()
                 
+                // Handle Disable/Timeout
+                if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
+                    print("Event Tap disabled by timeout. Re-enabling...")
+                    CGEvent.tapEnable(tap: hook.eventTap!, enable: true)
+                    return Unmanaged.passUnretained(event)
+                }
+                
                 // Check Global Toggle: Option + V (KeyCode 9)
                 if type == .keyDown {
                      let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
                      let flags = event.flags
-                     if keyCode == 9 && flags.contains(.maskAlternate) { // Option + V
+                     
+                     // Strict check: Only Option (and maybe Shift?) but definitely NOT Command or Control
+                     let isOptionOnly = flags.contains(.maskAlternate) && !flags.contains(.maskCommand) && !flags.contains(.maskControl)
+                     
+                     if keyCode == 9 && isOptionOnly { // Option + V
                          hook.onToggleRequest?()
                          return nil // Swallow
                      }
@@ -59,6 +99,12 @@ public class KeyboardHook {
                 
                 // IGNORE SIMULATED EVENTS (VimOS Magic Number)
                 if event.getIntegerValueField(.eventSourceUserData) == 0x555 {
+                    return Unmanaged.passUnretained(event)
+                }
+
+                // Check Ignored Applications using CACHED value
+                if let bundleId = hook.currentBundleIdentifier,
+                   ConfigManager.shared.config.ignoredApplications.contains(bundleId) {
                     return Unmanaged.passUnretained(event)
                 }
                 
