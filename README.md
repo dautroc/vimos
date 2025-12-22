@@ -4,6 +4,10 @@ VimOS brings Vim-like modal editing capabilities to the macOS operating system e
 
 ## Features
 
+### Global Shortcuts
+
+- **Option + V**: Toggle VimOS Enabled/Disabled globally.
+
 ### Modes
 
 - **Normal Mode**: Navigation and command execution (Default).
@@ -24,23 +28,44 @@ VimOS brings Vim-like modal editing capabilities to the macOS operating system e
 - `^`: Move to first non-whitespace character of line
 - `gg`: Move to start of document
 - `G`: Move to end of document
+- `t{char}`: Move cursor to before the next occurrence of `{char}`
 
 #### Editing
 
-- `i`: Enter Insert Mode
+- `i`: Insert before cursor
+- `a`: Insert after cursor (Append)
+- `A`: Insert at end of line (Append Line)
+- `o`: Open new line below and enter Insert Mode
+- `O`: Open new line above and enter Insert Mode
 - `x`: Delete character under cursor
+- `r{char}`: Replace character under cursor with `{char}`
 - `u`: Undo
 - `Ctrl+r`: Redo
 - `cc`: Change current line (delete line and enter Insert Mode)
-- `o`: Open new line below and enter Insert Mode
-- `O`: Open new line above and enter Insert Mode
+- `C`: Change from cursor to end of line
+- `ci{object}`: Change Inner Object
+  - Supports: `"` (quotes), `'` (single quotes), `` ` `` (backticks)
+  - Supports: `(` or `)` or `b` (parentheses)
+  - Supports: `{` or `}` or `B` (curly braces)
+  - Supports: `[` or `]` (brackets)
+  - Supports: `<` or `>` (angle brackets)
+
+#### Yank & Paste (Clipboard)
+
+- `yy`: Yank (copy) current line
+- `Y`: Yank from cursor to end of line
+- `p`: Paste after cursor (or below line if linewise)
+- `P`: Paste before cursor (or above line if linewise)
 
 #### Visual Selection
 
-- `v`: Toggle Visual Mode
-- `V`: Toggle Visual Line Mode
-- `d` (in Visual): Delete selection
-- `c` (in Visual): Change selection
+- `v`: Toggle Visual Mode (Character-wise)
+- `V`: Toggle Visual Line Mode (Line-wise)
+- `h`, `j`, `k`, `l`, `w`, `b`, `e`, `$`, `0`, `^`: Expand/Contract selection
+- `d`: Delete selection
+- `c`: Change selection (delete and enter Insert Mode)
+- `y`: Yank selection
+- `p`: Paste over selection (Replace)
 
 ## Configuration
 
@@ -82,6 +107,7 @@ VimOS supports customizable key mappings and application suppression via a JSON 
   - `to`: The target key or action (supports `^`, `$`, `<esc>`).
   - `modes`: List of modes where the mapping is active (`normal`, `insert`, `visual`). Defaults to all if omitted.
 - **ignoredApplications**: List of Bundle Identifiers for applications where VimOS should be disabled.
+  - Note: Terminal emulators (iTerm2, Terminal) are often best ignored to avoid conflict with their internal Vim.
 
 ## Usage
 
@@ -94,6 +120,7 @@ swift run VimOS
 ```
 
 Requires Accessibility permissions to control the cursor and intercept keys. The app will prompt for permissions on first launch.
+Ensure you grant access in **System Settings > Privacy & Security > Accessibility**.
 
 ### Running Tests
 
