@@ -26,6 +26,15 @@ mkdir -p "$RESOURCES_DIR"
 # Copy executable
 cp "$EXECUTABLE" "$MACOS_DIR/"
 
+# Copy icon
+ICON_SOURCE="Sources/VimOS/Resources/AppIcon.icns"
+if [ -f "$ICON_SOURCE" ]; then
+    cp "$ICON_SOURCE" "$RESOURCES_DIR/"
+    echo "Copied AppIcon.icns to bundle"
+else
+    echo "Warning: AppIcon.icns not found at $ICON_SOURCE"
+fi
+
 # Create Info.plist
 cat > "${CONTENTS_DIR}/Info.plist" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
@@ -34,6 +43,8 @@ cat > "${CONTENTS_DIR}/Info.plist" <<EOF
 <dict>
     <key>CFBundleExecutable</key>
     <string>${APP_NAME}</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
     <key>CFBundleIdentifier</key>
     <string>com.vimos.app</string>
     <key>CFBundleName</key>
