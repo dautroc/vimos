@@ -16,7 +16,10 @@ let package = Package(
         // Main Application Executable
         .executableTarget(
             name: "VimOS",
-            dependencies: ["VimOSCore"]
+            dependencies: ["VimOSCore"],
+            resources: [
+                .process("Resources")
+            ]
         ),
         // Custom Test Runner Executable
         .executableTarget(
