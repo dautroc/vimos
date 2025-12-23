@@ -1,0 +1,3 @@
+- bug: fix wrong behaviour with r motion (22ca946)
+- bug: fix wrong behaviour of x and d in visual mode (8fd4af6)
+- doc: update README (8f97358)

@@ -7,8 +7,20 @@ set -e
 
 VERSION="$1"
 if [ -z "$VERSION" ]; then
-    VERSION="v1.1.0"
-    echo "No version specified, defaulting to $VERSION"
+    # Try to find the latest tag that is reachable
+    LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+
+    if [ -z "$LAST_TAG" ]; then
+        VERSION="v0.1.0"
+        echo "No previous tag found. Defaulting to $VERSION"
+    else
+        # Increment patch version using awk
+        # -F. sets delimiter to dot
+        # $NF is the last field (patch version)
+        # OFS=. sets output delimiter to dot
+        VERSION=$(echo $LAST_TAG | awk -F. -v OFS=. '{$NF+=1; print}')
+        echo "No version specified. Latest tag was $LAST_TAG. Auto-incrementing to $VERSION"
+    fi
 fi
 
 # Build
