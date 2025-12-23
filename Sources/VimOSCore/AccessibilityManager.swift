@@ -680,6 +680,9 @@ public class AccessibilityManager: AccessibilityManagerProtocol {
     }
     
     public func replaceCurrentCharacter(with charCode: CGKeyCode, flags: CGEventFlags) { // r + char
+        // Ensure the selection matches the expected block cursor position
+        setBlockCursor(true, updateImmediate: true)
+
         // Attempt AX replacement first (Cleanest)
         // 1. Convert charCode to string? (Hard without mapping, so let's skip pure AX text injection for now unless we have the char)
         // Since we only have keycode, we depend on simulation for input.
@@ -716,7 +719,8 @@ public class AccessibilityManager: AccessibilityManagerProtocol {
         }
         
         // 3. Move cursor back left to stay on the new char
-        moveCursor(.left)
+        // Use simulation to ensure it happens AFTER the typed character in the event queue (Race Condition Fix)
+        simulateKeyPress(keyCode: 123)
     }
     
     // MARK: - Text Access

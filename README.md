@@ -140,7 +140,7 @@ VimOS supports customizable key mappings and application suppression via a JSON 
 - **ignoredApplications**: List of Bundle Identifiers for applications where VimOS should be disabled.
   - Note: Terminal emulators (iTerm2, Terminal) are often best ignored to avoid conflict with their internal Vim.
 
-## Usage
+## Development
 
 ### Running the Application
 
