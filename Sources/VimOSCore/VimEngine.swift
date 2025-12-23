@@ -314,7 +314,7 @@ public class VimEngine: KeyboardHookDelegate {
                      } else {
                          accessibilityManager.deleteCurrentCharacter()
                      }
-                     switchMode(to: .normal)
+                     switchMode(to: .normal, collapseSelection: false, updateCursorImmediate: false)
                 } else {
                     accessibilityManager.deleteCurrentCharacter()
                 }
@@ -359,7 +359,7 @@ public class VimEngine: KeyboardHookDelegate {
                      } else {
                          accessibilityManager.deleteCurrentCharacter()
                      }
-                     switchMode(to: .normal)
+                     switchMode(to: .normal, collapseSelection: false, updateCursorImmediate: false)
                      return true
                  }
                  return true
