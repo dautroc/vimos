@@ -67,8 +67,4 @@ cat > "${CONTENTS_DIR}/Info.plist" <<EOF
 </plist>
 EOF
 
-# Ad-hoc code signing (Required for Apple Silicon)
-echo "Signing app bundle..."
-codesign --force --deep --sign - "${APP_BUNDLE}"
-
 echo "App bundle created at ${APP_BUNDLE}"
