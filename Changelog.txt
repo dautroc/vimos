@@ -1,5 +1,1 @@
-- chore: remove label (82a6104)
-- chore: update release script (c630c60)
-- bug: fix wrong behaviour with r motion (22ca946)
-- bug: fix wrong behaviour of x and d in visual mode (8fd4af6)
-- doc: update README (8f97358)
+- chore: update script to bundle app (0196b9d)
