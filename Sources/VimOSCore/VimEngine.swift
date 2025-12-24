@@ -310,7 +310,10 @@ public class VimEngine: KeyboardHookDelegate {
                      } else {
                          accessibilityManager.deleteCurrentCharacter()
                      }
-                     switchMode(to: .normal, collapseSelection: false, updateCursorImmediate: false)
+                     // Delay switchMode to allow delete event to process
+                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.02) {
+                         self.switchMode(to: .normal, collapseSelection: false, updateCursorImmediate: false)
+                     }
                 } else {
                     accessibilityManager.deleteCurrentCharacter()
                 }
@@ -335,7 +338,9 @@ public class VimEngine: KeyboardHookDelegate {
             case 35: // p
                 if mode == .visual {
                     accessibilityManager.pasteInVisual()
-                    switchMode(to: .normal, collapseSelection: false, updateCursorImmediate: false)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.02) {
+                        self.switchMode(to: .normal, collapseSelection: false, updateCursorImmediate: false)
+                    }
                     return true
                 }
                 
@@ -355,7 +360,10 @@ public class VimEngine: KeyboardHookDelegate {
                      } else {
                          accessibilityManager.deleteCurrentCharacter()
                      }
-                     switchMode(to: .normal, collapseSelection: false, updateCursorImmediate: false)
+                     // Delay switchMode to allow delete event to process
+                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.02) {
+                         self.switchMode(to: .normal, collapseSelection: false, updateCursorImmediate: false)
+                     }
                      return true
                  }
                  return true
