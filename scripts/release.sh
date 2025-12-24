@@ -23,6 +23,10 @@ if [ -z "$VERSION" ]; then
     fi
 fi
 
+# Update Source Version
+echo "Updating Version.swift to $VERSION..."
+sed -i '' "s/public let VimOSVersion = \".*\"/public let VimOSVersion = \"$VERSION\"/" Sources/VimOSCore/Version.swift
+
 # Build
 echo "Building VimOS (Release)..."
 swift build -c release --product VimOS

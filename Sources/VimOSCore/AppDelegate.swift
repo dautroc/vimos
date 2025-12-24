@@ -31,6 +31,9 @@ public class AppDelegate: NSObject, NSApplicationDelegate {
 
     public func applicationDidFinishLaunching(_ notification: Notification) {
         log("Application Launching...")
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? VimOSVersion
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? VimOSVersion
+        log("Version: \(version) (\(build))")
         
         // Setup Status Bar
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
