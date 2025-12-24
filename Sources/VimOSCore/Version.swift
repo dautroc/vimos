@@ -1,2 +1,2 @@
 
-public let VimOSVersion = "1.2.2-beta"
+public let VimOSVersion = "v1.2.3-beta"

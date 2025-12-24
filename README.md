@@ -69,14 +69,19 @@ VimOS brings Vim-like modal editing capabilities to the macOS operating system e
 
 ## Installation & Build
 
-### Recommended: Download Release
+### Installation
 
-Download the latest pre-built release (ZIP) from the Releases page.
+To install the application:
 
-1. Unzip the archive.
-2. Move `VimOS.app` to your `/Applications` folder.
-3. Launch `VimOS.app`.
+1. Download and unzip the release.
+2. Run the following command to prepare the app (clears quarantine attributes):
+   ```bash
+   xattr -c path_to_VimOS
+   ```
+   _(Replace `path_to_VimOS` with the actual path to your `VimOS.app`)_
+3. Move `VimOS.app` to `/Applications` and launch it.
 4. Grant Accessibility permissions when prompted.
+5. **Restart the application** to ensure full functionality.
 
 ### Building from Source
 
