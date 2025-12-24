@@ -10,13 +10,9 @@ public enum VimOperator: Sendable {
     case change
 }
 
-public protocol VimEngineUIDelegate: AnyObject, Sendable {
-    @MainActor func didSwitchMode(_ mode: VimMode)
-    @MainActor func didHideOverlay()
-}
+
 
 public class VimEngine: KeyboardHookDelegate {
-    public weak var uiDelegate: VimEngineUIDelegate?
     private var mode: VimMode = .insert
     private let accessibilityManager: AccessibilityManagerProtocol
     private var lastMode: VimMode = .insert // To track previous mode efficiently
@@ -424,18 +420,8 @@ public class VimEngine: KeyboardHookDelegate {
             accessibilityManager.prepareForInsertMode(collapseSelection: collapseSelection)
         }
         
-        // Update Indicator for new mode
-        let currentDelegate = uiDelegate
-        let currentMode = mode
-        DispatchQueue.main.async {
-            currentDelegate?.didSwitchMode(currentMode)
-        }
+
     }
     
-    func hideIndicator() {
-        let currentDelegate = uiDelegate
-        DispatchQueue.main.async {
-             currentDelegate?.didHideOverlay()
-        }
-    }
+
 }

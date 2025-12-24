@@ -1,11 +1,11 @@
 import Cocoa
 
 @MainActor
-public class AppDelegate: NSObject, NSApplicationDelegate, VimEngineUIDelegate {
+public class AppDelegate: NSObject, NSApplicationDelegate {
     var statusItem: NSStatusItem!
     var hook: KeyboardHook?
     var vimEngine: VimEngine?
-    var modeIndicator: ModeIndicator?
+
     var isEnabled = true
 
     public override init() {
@@ -82,9 +82,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate, VimEngineUIDelegate {
         }
         // Start Engine
         vimEngine = VimEngine()
-        vimEngine?.uiDelegate = self
-        
-        modeIndicator = ModeIndicator()
+
         
         hook = KeyboardHook()
         hook?.delegate = vimEngine
@@ -106,7 +104,6 @@ public class AppDelegate: NSObject, NSApplicationDelegate, VimEngineUIDelegate {
                 print("VimOS Enabled via Shortcut")
             } else {
                 self.hook?.stop()
-                self.modeIndicator?.hide()
                 print("VimOS Disabled via Shortcut")
             }
         }
@@ -123,18 +120,10 @@ public class AppDelegate: NSObject, NSApplicationDelegate, VimEngineUIDelegate {
             print("VimOS Enabled")
         } else {
             hook?.stop()
-            modeIndicator?.hide()
+
             print("VimOS Disabled")
         }
     }
     
-    // MARK: - VimEngineUIDelegate
-    
-    public func didSwitchMode(_ mode: VimMode) {
-        modeIndicator?.show(mode: mode)
-    }
-    
-    public func didHideOverlay() {
-        modeIndicator?.hide()
-    }
+
 }
