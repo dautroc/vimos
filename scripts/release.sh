@@ -6,12 +6,6 @@ set -e
 # Example: ./scripts/release.sh v1.1.0
 
 VERSION="$1"
-FORCE_MODE="false"
-
-if [ "$2" == "--force" ]; then
-    FORCE_MODE="true"
-    echo "Force mode enabled. Existing tags/releases will be overwritten."
-fi
 if [ -z "$VERSION" ]; then
     # Try to find the latest tag that is reachable
     LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
@@ -31,8 +25,6 @@ fi
 
 # Build
 echo "Building VimOS (Release)..."
-echo "Cleaning previous build..."
-swift package clean
 swift build -c release --product VimOS
 
 # Bundle
@@ -64,25 +56,6 @@ echo "Release $VERSION created successfully: $ARCHIVE_NAME"
 
 # Git Tag
 echo "Creating Git Tag $VERSION..."
-
-if [ "$FORCE_MODE" == "true" ]; then
-    echo "Checking for existing tags/releases to delete..."
-    
-    # Check local tag
-    if git rev-parse "$VERSION" >/dev/null 2>&1; then
-        echo "Deleting local tag $VERSION..."
-        git tag -d "$VERSION"
-    fi
-    
-    # Check remote/release
-    if command -v gh &> /dev/null; then
-        if gh release view "$VERSION" >/dev/null 2>&1; then
-             echo "Deleting existing GitHub release $VERSION..."
-             gh release delete "$VERSION" --cleanup-tag -y
-        fi
-    fi
-fi
-
 if git rev-parse "$VERSION" >/dev/null 2>&1; then
     echo "Tag $VERSION already exists. Skipping creation."
 else
