@@ -13,6 +13,13 @@ public class KeyboardHook: @unchecked Sendable {
 
     public var onToggleRequest: (() -> Void)?
     
+    private var toggleShortcut: Shortcut? {
+        if let str = ConfigManager.shared.config.toggleShortcut {
+            return ShortcutUtils.parse(str)
+        }
+        return nil
+    }
+    
     // Cache for frontmost application to avoid blocking event tap
     private var currentBundleIdentifier: String?
     private var observer: NSObjectProtocol?
@@ -79,17 +86,19 @@ public class KeyboardHook: @unchecked Sendable {
                     return Unmanaged.passUnretained(event)
                 }
                 
-                // Check Global Toggle: Option + V (KeyCode 9)
+                // Check Global Toggle
                 if type == .keyDown {
                      let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
                      let flags = event.flags
                      
-                     // Strict check: Only Option (and maybe Shift?) but definitely NOT Command or Control
-                     let isOptionOnly = flags.contains(.maskAlternate) && !flags.contains(.maskCommand) && !flags.contains(.maskControl)
-                     
-                     if keyCode == 9 && isOptionOnly { // Option + V
-                         hook.onToggleRequest?()
-                         return nil // Swallow
+                     if let shortcut = hook.toggleShortcut {
+                         let currentModifiers = flags.intersection([.maskCommand, .maskControl, .maskAlternate, .maskShift])
+                         let targetModifiers = shortcut.modifiers.intersection([.maskCommand, .maskControl, .maskAlternate, .maskShift])
+
+                         if Int(keyCode) == shortcut.keyCode && currentModifiers == targetModifiers {
+                             hook.onToggleRequest?()
+                             return nil // Swallow
+                         }
                      }
                 }
                 

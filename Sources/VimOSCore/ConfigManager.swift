@@ -15,12 +15,25 @@ public struct KeyMapping: Codable, Sendable {
 public struct VimOSConfig: Codable, Sendable {
     public let mappings: [KeyMapping]
     public let ignoredApplications: [String]
+    public let toggleShortcut: String?
     
-    public static let defaults = VimOSConfig(mappings: [], ignoredApplications: [])
+    public static let defaults = VimOSConfig(mappings: [], ignoredApplications: [], toggleShortcut: "Option+v")
 
-    public init(mappings: [KeyMapping], ignoredApplications: [String]) {
+    public init(mappings: [KeyMapping], ignoredApplications: [String], toggleShortcut: String? = nil) {
         self.mappings = mappings
         self.ignoredApplications = ignoredApplications
+        self.toggleShortcut = toggleShortcut
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.mappings = try container.decodeIfPresent([KeyMapping].self, forKey: .mappings) ?? []
+        self.ignoredApplications = try container.decodeIfPresent([String].self, forKey: .ignoredApplications) ?? []
+        if let val = try container.decodeIfPresent(String.self, forKey: .toggleShortcut) {
+            self.toggleShortcut = val
+        } else {
+            self.toggleShortcut = "Option+v"
+        }
     }
 }
 

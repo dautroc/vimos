@@ -1,7 +1,1 @@
-- bug: fix discrepancy version (954950d)
-- Revert "bug: fix race condition when switching mode" (13f4353)
-- Revert "bug: fix bundle app damaged" (62c1dab)
-- Revert "bug: fix cache package when release app" (1e8b326)
-- bug: fix cache package when release app (1632605)
-- bug: fix race condition when switching mode (5ba5b2f)
-- bug: fix bundle app damaged (7ebb672)
+- chore: update README to install app (8c0fd76)

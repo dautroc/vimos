@@ -132,7 +132,8 @@ VimOS supports customizable key mappings and application suppression via a JSON 
     "com.apple.Terminal",
     "com.googlecode.iterm2",
     "com.microsoft.VSCode"
-  ]
+  ],
+  "toggleShortcut": "Option+v"
 }
 ```
 
@@ -144,6 +145,9 @@ VimOS supports customizable key mappings and application suppression via a JSON 
   - `modes`: List of modes where the mapping is active (`normal`, `insert`, `visual`). Defaults to all if omitted.
 - **ignoredApplications**: List of Bundle Identifiers for applications where VimOS should be disabled.
   - Note: Terminal emulators (iTerm2, Terminal) are often best ignored to avoid conflict with their internal Vim.
+- **toggleShortcut**: Global shortcut to toggle VimOS (Default: "Option+v").
+  - Format: "Modifier+key" (e.g. "Option+s").
+  - Supported modifiers: `Option`, `Alt`, `Command`, `Cmd`, `Control`, `Ctrl`, `Shift`.
 
 ## Development
 

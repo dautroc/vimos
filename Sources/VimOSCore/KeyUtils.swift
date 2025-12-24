@@ -54,9 +54,6 @@ public struct KeyUtils {
     // Convert KeyCode + Flags to String (Input)
     // We only care about the keys capable of starting a mapping (usually letters)
     static func char(from event: CGEvent) -> String? {
-        let code = event.getIntegerValueField(.keyboardEventKeycode)
-        let flags = event.flags
-        
         // Use .characters to preserve case (e.g. Shift+h -> "H") for case-sensitive mappings
         if let nsEvent = NSEvent(cgEvent: event), let chars = nsEvent.characters {
             return chars
