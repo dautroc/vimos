@@ -9,6 +9,12 @@ CONTENTS_DIR="${APP_BUNDLE}/Contents"
 MACOS_DIR="${CONTENTS_DIR}/MacOS"
 RESOURCES_DIR="${CONTENTS_DIR}/Resources"
 
+VERSION="$1"
+if [ -z "$VERSION" ]; then
+    VERSION="1.0"
+    echo "No version specified, defaulting to ${VERSION}"
+fi
+
 # Check if build exists
 if [ ! -f "$EXECUTABLE" ]; then
     echo "Error: Release executable not found at $EXECUTABLE"
@@ -50,9 +56,9 @@ cat > "${CONTENTS_DIR}/Info.plist" <<EOF
     <key>CFBundleName</key>
     <string>${APP_NAME}</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.0</string>
+    <string>${VERSION}</string>
     <key>CFBundleVersion</key>
-    <string>1</string>
+    <string>${VERSION}</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>LSUIElement</key>

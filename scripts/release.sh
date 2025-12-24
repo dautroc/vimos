@@ -29,7 +29,7 @@ swift build -c release --product VimOS
 
 # Bundle
 echo "Bundling App..."
-./scripts/bundle_app.sh
+./scripts/bundle_app.sh "$VERSION"
 
 # Changelog
 echo "Generating Changelog..."
@@ -53,3 +53,23 @@ echo "Packaging ${ARCHIVE_NAME}..."
 zip -r "$ARCHIVE_NAME" VimOS.app Changelog.txt
 
 echo "Release $VERSION created successfully: $ARCHIVE_NAME"
+
+# Git Tag
+echo "Creating Git Tag $VERSION..."
+if git rev-parse "$VERSION" >/dev/null 2>&1; then
+    echo "Tag $VERSION already exists. Skipping creation."
+else
+    git tag -a "$VERSION" -m "Release $VERSION"
+    echo "Pushing tag to origin..."
+    git push origin "$VERSION"
+fi
+
+# GitHub Release
+echo "Creating GitHub Release..."
+if command -v gh &> /dev/null; then
+    gh release create "$VERSION" "$ARCHIVE_NAME" --title "$VERSION" --notes-file Changelog.txt
+    echo "GitHub Release created successfully!"
+else
+    echo "Error: 'gh' CLI not found. Please install github-cli to automate release creation."
+    echo "You can manually create a release and upload $ARCHIVE_NAME"
+fi
